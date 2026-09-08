@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { conTenant } from '../src/db/pool.js';
+import { conTenant, ownerPool } from '../src/db/pool.js';
 import * as est from '../src/domain/estructura.js';
 import { crearEntidadDemo } from './helpers.js';
 
@@ -13,7 +13,9 @@ describe('Auditoría append-only (inmutabilidad)', () => {
     expect(hist[0]!.accion).toBe('CREAR');
   });
 
-  it('NO se puede hacer UPDATE sobre auditoria', async () => {
+  // Capa 1 (privilegios): el rol de app ni siquiera tiene UPDATE/DELETE sobre
+  // auditoria (REVOKE), así que Postgres deniega antes de llegar al trigger.
+  it('el rol de aplicación NO puede hacer UPDATE sobre auditoria', async () => {
     const a = await crearEntidadDemo('AUD2');
     const ctx = { entidadId: a.entidadId, usuarioId: null };
     await est.crearUnidad(ctx, { codigo: 'AU2', denominacion: 'Aud2' });
@@ -21,10 +23,10 @@ describe('Auditoría append-only (inmutabilidad)', () => {
       conTenant(ctx, async (ej) => {
         await ej.query(`UPDATE auditoria SET motivo = 'manipulado' WHERE tabla = 'unidad_organica'`);
       }),
-    ).rejects.toThrow(/append-only/i);
+    ).rejects.toThrow(/append-only|permission denied/i);
   });
 
-  it('NO se puede hacer DELETE sobre auditoria', async () => {
+  it('el rol de aplicación NO puede hacer DELETE sobre auditoria', async () => {
     const a = await crearEntidadDemo('AUD3');
     const ctx = { entidadId: a.entidadId, usuarioId: null };
     await est.crearUnidad(ctx, { codigo: 'AU3', denominacion: 'Aud3' });
@@ -32,6 +34,24 @@ describe('Auditoría append-only (inmutabilidad)', () => {
       conTenant(ctx, async (ej) => {
         await ej.query(`DELETE FROM auditoria WHERE tabla = 'unidad_organica'`);
       }),
+    ).rejects.toThrow(/append-only|permission denied/i);
+  });
+
+  // Capa 2 (trigger): backstop incluso para un rol CON privilegios (propietario).
+  // Los superusuarios saltan la RLS, pero NO los triggers.
+  it('el trigger bloquea UPDATE aunque el rol tenga privilegios', async () => {
+    const a = await crearEntidadDemo('AUD_TRG_U');
+    await est.crearUnidad({ entidadId: a.entidadId, usuarioId: null }, { codigo: 'T', denominacion: 'T' });
+    await expect(
+      ownerPool.query(`UPDATE auditoria SET motivo = 'x' WHERE entidad_id = $1`, [a.entidadId]),
+    ).rejects.toThrow(/append-only/i);
+  });
+
+  it('el trigger bloquea DELETE aunque el rol tenga privilegios', async () => {
+    const a = await crearEntidadDemo('AUD_TRG_D');
+    await est.crearUnidad({ entidadId: a.entidadId, usuarioId: null }, { codigo: 'T', denominacion: 'T' });
+    await expect(
+      ownerPool.query(`DELETE FROM auditoria WHERE entidad_id = $1`, [a.entidadId]),
     ).rejects.toThrow(/append-only/i);
   });
 

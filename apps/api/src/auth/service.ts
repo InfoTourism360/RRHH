@@ -1,6 +1,6 @@
 import { ownerPool } from '../db/pool.js';
 import { env } from '../config/env.js';
-import { verificarPassword } from './passwords.js';
+import { hashearPassword, verificarPassword } from './passwords.js';
 import { verificarTotp } from './mfa.js';
 import { descifrar } from './crypto.js';
 import { hashToken, nuevoToken } from './tokens.js';
@@ -22,7 +22,16 @@ export interface SesionActiva {
   sesionId: string;
   entidadId: string;
   usuarioId: string;
+  personaId: string | null;
   roles: { rol: string; unidadId: string | null }[];
+}
+
+async function personaDeUsuario(usuarioId: string): Promise<string | null> {
+  const r = await ownerPool.query<{ persona_id: string | null }>(
+    'SELECT persona_id FROM usuario WHERE id = $1',
+    [usuarioId],
+  );
+  return r.rows[0]?.persona_id ?? null;
 }
 
 export async function login(params: {
@@ -97,9 +106,44 @@ export async function login(params: {
       sesionId: s.rows[0]!.id,
       entidadId,
       usuarioId: usuario.id,
+      personaId: await personaDeUsuario(usuario.id),
       roles: await cargarRoles(entidadId, usuario.id),
     },
   };
+}
+
+/** Autenticación de QUIOSCO: identificación por credencial + PIN (nunca biometría). */
+export async function autenticarQuiosco(params: {
+  cif: string;
+  email: string;
+  pin: string;
+}): Promise<{ entidadId: string; usuarioId: string; personaId: string }> {
+  const ent = await ownerPool.query<{ id: string }>(
+    'SELECT id FROM entidad WHERE cif = $1 AND activo',
+    [params.cif],
+  );
+  const entidadId = ent.rows[0]?.id;
+  if (!entidadId) throw new ErrorAuth('CREDENCIALES', 'Credenciales de quiosco inválidas.');
+  const u = await ownerPool.query<{ id: string; pin_hash: string | null; persona_id: string | null; activo: boolean }>(
+    'SELECT id, pin_hash, persona_id, activo FROM usuario WHERE entidad_id = $1 AND email = $2',
+    [entidadId, params.email],
+  );
+  const usuario = u.rows[0];
+  if (!usuario || !usuario.activo || !usuario.pin_hash || !usuario.persona_id) {
+    throw new ErrorAuth('CREDENCIALES', 'Credenciales de quiosco inválidas.');
+  }
+  if (!(await verificarPassword(usuario.pin_hash, params.pin))) {
+    throw new ErrorAuth('CREDENCIALES', 'Credenciales de quiosco inválidas.');
+  }
+  return { entidadId, usuarioId: usuario.id, personaId: usuario.persona_id };
+}
+
+/** Establece/actualiza el PIN de quiosco del usuario (hash Argon2id). */
+export async function establecerPin(usuarioId: string, pin: string): Promise<void> {
+  await ownerPool.query('UPDATE usuario SET pin_hash = $2 WHERE id = $1', [
+    usuarioId,
+    await hashearPassword(pin),
+  ]);
 }
 
 async function registrarFallo(usuarioId: string, intentosPrevios: number): Promise<void> {
@@ -157,6 +201,7 @@ export async function resolverSesion(token: string): Promise<SesionActiva | null
     sesionId: ses.id,
     entidadId: ses.entidad_id,
     usuarioId: ses.usuario_id,
+    personaId: await personaDeUsuario(ses.usuario_id),
     roles: await cargarRoles(ses.entidad_id, ses.usuario_id),
   };
 }

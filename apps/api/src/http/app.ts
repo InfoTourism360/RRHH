@@ -3,6 +3,7 @@ import { login, logout, ErrorAuth } from '../auth/service.js';
 import { ErrorDominio } from '../domain/estructura.js';
 import * as est from '../domain/estructura.js';
 import { ctxDe, requiereRol, requiereSesion, validar } from './middleware.js';
+import { rutasHorario } from './horario.js';
 import {
   cambioSituacionSchema, ceseSchema, loginSchema, personaSchema,
   plazaSchema, puestoSchema, relacionSchema, unidadSchema,
@@ -81,15 +82,22 @@ export function crearApp() {
   app.get('/estructura/auditoria/:tabla/:registroId', h(async (req, res) =>
     res.json(await est.historialAuditoria(ctxDe(req), String(req.params.tabla), String(req.params.registroId)))));
 
+  // -------------------------- CONTROL HORARIO ------------------------------
+  app.use('/horario', rutasHorario());
+
   // ------------------------- MANEJO DE ERRORES -----------------------------
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof ErrorAuth) {
-      const code = err.codigo === 'BLOQUEADO' ? 423 : err.codigo === 'MFA_REQUERIDO' ? 401 : 401;
+      const code = err.codigo === 'BLOQUEADO' ? 423 : 401;
       return res.status(code).json({ error: err.message, codigo: err.codigo });
     }
     if (err instanceof ErrorDominio) {
       const code = err.codigo === 'NO_ENCONTRADO' ? 404 : 409;
       return res.status(code).json({ error: err.message, codigo: err.codigo });
+    }
+    const status = (err as { status?: number }).status;
+    if (typeof status === 'number') {
+      return res.status(status).json({ error: (err as Error).message });
     }
     console.error(err);
     res.status(500).json({ error: 'Error interno.' });

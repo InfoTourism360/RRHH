@@ -79,3 +79,34 @@ export const cambioSituacionSchema = z
     motivo: z.string().min(3).max(500),
   })
   .strict();
+
+// ------------------------------- CONTROL HORARIO ----------------------------
+const geoSchema = z.object({ lat: z.number().min(-90).max(90), lon: z.number().min(-180).max(180) });
+
+export const ficharSchema = z
+  .object({
+    tipo: z.enum(['ENTRADA', 'SALIDA', 'INICIO_PAUSA', 'FIN_PAUSA']),
+    origen: z.enum(['WEB', 'MOVIL', 'QUIOSCO']),
+    momentoCliente: z.string().datetime().nullable().optional(),
+    geo: geoSchema.nullable().optional(),
+  })
+  .strict();
+
+export const quioscoFicharSchema = ficharSchema
+  .extend({ cif: z.string().min(1), email: z.string().email(), pin: z.string().regex(/^\d{4,8}$/) })
+  .strict();
+
+export const correccionSchema = z
+  .object({
+    accion: z.enum(['MODIFICA', 'ANULA', 'ANADE']),
+    corrigeEventoId: z.string().uuid().nullable().optional(),
+    personaId: z.string().uuid().nullable().optional(),
+    tipo: z.enum(['ENTRADA', 'SALIDA', 'INICIO_PAUSA', 'FIN_PAUSA']).nullable().optional(),
+    momentoCliente: z.string().datetime().nullable().optional(),
+    motivo: z.string().min(3).max(500),
+  })
+  .strict();
+
+export const pinSchema = z.object({ pin: z.string().regex(/^\d{4,8}$/) }).strict();
+
+export const rangoSchema = z.object({ desde: fecha, hasta: fecha }).strict();

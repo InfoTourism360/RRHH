@@ -1,6 +1,10 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+// Todo el producto opera en Europe/Madrid; fijamos la TZ del proceso para que
+// los cómputos de jornada (agrupación por día) sean coherentes en cualquier host.
+process.env.TZ = 'Europe/Madrid';
+
 // Validación estricta de la configuración de entorno al arrancar.
 const schema = z.object({
   DATABASE_URL_OWNER: z.string().url(),

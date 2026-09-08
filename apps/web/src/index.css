@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-gray-50 text-gray-900; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+  /* Foco visible siempre (WCAG 2.4.7). Nunca eliminamos el outline sin sustituto. */
+  :focus-visible { outline: 3px solid #0b5cab; outline-offset: 2px; border-radius: 2px; }
+
+  /* Respeta reducción de movimiento. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+}
+
+@layer components {
+  /* Enlace de salto al contenido (visible al enfocar). */
+  .salto-contenido {
+    @apply sr-only;
+  }
+  .salto-contenido:focus {
+    @apply not-sr-only fixed top-2 left-2 z-50 bg-white text-marca px-4 py-2 rounded shadow font-semibold;
+  }
+}

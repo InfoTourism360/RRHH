@@ -1,0 +1,14 @@
+{
+  "name": "Portal del empleado — RRHH",
+  "short_name": "RRHH",
+  "description": "Fichaje, ausencias y documentos del personal",
+  "lang": "es-ES",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b5cab",
+  "icons": [
+    { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

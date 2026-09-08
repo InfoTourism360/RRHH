@@ -1,7 +1,9 @@
 import { ownerPool, conTenant, cerrarPools } from '../db/pool.js';
 import * as est from '../domain/estructura.js';
 import * as aus from '../domain/ausencias.js';
+import { publicarDocumento } from '../domain/documentos.js';
 import { crearFestivo } from '../domain/calendario.js';
+import { establecerPin } from '../auth/service.js';
 import { hashearPassword } from '../auth/passwords.js';
 
 // -----------------------------------------------------------------------------
@@ -197,31 +199,53 @@ async function main() {
 
   // --- Fase 3: catálogo de ausencias, calendario laboral y saldos ---
   await aus.precargarCatalogo(ctx);
-  const festivos2025: [string, string, string][] = [
-    ['2025-01-01', 'Año Nuevo', 'NACIONAL'],
-    ['2025-01-06', 'Epifanía del Señor', 'NACIONAL'],
-    ['2025-04-18', 'Viernes Santo', 'NACIONAL'],
-    ['2025-05-01', 'Fiesta del Trabajo', 'NACIONAL'],
-    ['2025-08-15', 'Asunción de la Virgen', 'NACIONAL'],
-    ['2025-10-12', 'Fiesta Nacional de España', 'NACIONAL'],
-    ['2025-11-01', 'Todos los Santos', 'NACIONAL'],
-    ['2025-12-06', 'Día de la Constitución', 'NACIONAL'],
-    ['2025-12-08', 'Inmaculada Concepción', 'NACIONAL'],
-    ['2025-12-25', 'Natividad del Señor', 'NACIONAL'],
-    ['2025-03-19', 'San José (autonómico)', 'AUTONOMICO'],
-    ['2025-06-24', 'Fiesta local de Villademo', 'LOCAL'],
-    ['2025-09-08', 'Fiesta local de Villademo', 'LOCAL'],
+  const anio = new Date().getFullYear(); // año en curso, para que la demo sea vigente
+  const festivosMMDD: [string, string, string][] = [
+    ['01-01', 'Año Nuevo', 'NACIONAL'],
+    ['01-06', 'Epifanía del Señor', 'NACIONAL'],
+    ['05-01', 'Fiesta del Trabajo', 'NACIONAL'],
+    ['08-15', 'Asunción de la Virgen', 'NACIONAL'],
+    ['10-12', 'Fiesta Nacional de España', 'NACIONAL'],
+    ['11-01', 'Todos los Santos', 'NACIONAL'],
+    ['12-06', 'Día de la Constitución', 'NACIONAL'],
+    ['12-08', 'Inmaculada Concepción', 'NACIONAL'],
+    ['12-25', 'Natividad del Señor', 'NACIONAL'],
+    ['03-19', 'San José (autonómico)', 'AUTONOMICO'],
+    ['06-24', 'Fiesta local de Villademo', 'LOCAL'],
+    ['09-08', 'Fiesta local de Villademo', 'LOCAL'],
   ];
-  for (const [f, den, amb] of festivos2025) {
-    await crearFestivo(ctx, { fecha: f, denominacion: den, ambito: amb });
+  for (const [mmdd, den, amb] of festivosMMDD) {
+    await crearFestivo(ctx, { fecha: `${anio}-${mmdd}`, denominacion: den, ambito: amb });
   }
-  // Saldos 2025 para toda la plantilla (vacaciones 22 hábiles + 6 asuntos particulares).
+  // Saldos del año en curso (vacaciones 22 hábiles + 6 asuntos particulares).
   const personas = await conTenant(ctx, async (ej) =>
     (await ej.query<{ id: string }>('SELECT id FROM persona')).rows);
   for (const p of personas) {
-    await aus.asignarSaldo(ctx, { personaId: p.id, tipoCodigo: 'VACACIONES', anio: 2025, dias: 22 });
-    await aus.asignarSaldo(ctx, { personaId: p.id, tipoCodigo: 'ASUNTOS_PART', anio: 2025, dias: 6 });
+    await aus.asignarSaldo(ctx, { personaId: p.id, tipoCodigo: 'VACACIONES', anio, dias: 22 });
+    await aus.asignarSaldo(ctx, { personaId: p.id, tipoCodigo: 'ASUNTOS_PART', anio, dias: 6 });
   }
+
+  // --- Fase 4: un usuario EMPLEADO real (con persona) para el portal ---
+  const empleado = creados[0]!; // primera persona creada
+  const hashEmp = await hashearPassword('Demo1234!');
+  const ue = await ownerPool.query<{ id: string }>(
+    `INSERT INTO usuario (entidad_id, persona_id, email, password_hash)
+     VALUES ($1,$2,'empleado@villademo.es',$3) RETURNING id`,
+    [entidadId, empleado.personaId, hashEmp],
+  );
+  await ownerPool.query(
+    `INSERT INTO usuario_rol (entidad_id, usuario_id, rol_codigo) VALUES ($1,$2,'EMPLEADO')`,
+    [entidadId, ue.rows[0]!.id],
+  );
+  await establecerPin(ue.rows[0]!.id, '1234'); // PIN de quiosco de demo
+
+  // Documento de demo (recibo de nómina en PDF mínimo) para ese empleado.
+  const pdfDemo = Buffer.from(
+    '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF Recibo de nomina de demostracion', 'latin1');
+  await publicarDocumento(ctx, {
+    personaId: empleado.personaId, tipo: 'NOMINA', titulo: 'Nómina de demostración',
+    nombreFichero: 'nomina_demo.pdf', contenido: pdfDemo,
+  });
 
   const resumen = await conTenant(ctx, async (ej) => {
     const p = await ej.query('SELECT count(*) FROM persona');
@@ -234,7 +258,9 @@ async function main() {
 
   console.log('Seed completado:', {
     entidad: 'Ayuntamiento de Villademo', cif: CIF,
-    login: 'admin@villademo.es / Demo1234!', ...resumen,
+    adminLogin: 'admin@villademo.es / Demo1234!',
+    empleadoLogin: 'empleado@villademo.es / Demo1234! (PIN quiosco 1234)',
+    ...resumen,
   });
 }
 

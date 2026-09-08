@@ -2,7 +2,8 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import { login, logout, ErrorAuth } from '../auth/service.js';
 import { ErrorDominio } from '../domain/estructura.js';
 import * as est from '../domain/estructura.js';
-import { ctxDe, requiereRol, requiereSesion, validar } from './middleware.js';
+import { ctxDe, requiereRol, requiereSesion, validar, registroActividad } from './middleware.js';
+import { listarActividad } from '../domain/registroActividad.js';
 import { rutasHorario } from './horario.js';
 import { rutasAusencias } from './ausencias.js';
 import { rutasPortal } from './portal.js';
@@ -25,6 +26,10 @@ export function crearApp() {
 
   app.get('/salud', (_req, res) => res.json({ ok: true }));
 
+  // Registro de actividad ENS: traza cada petición (tras resolver la sesión más
+  // abajo, la traza incluye usuario/entidad cuando existen).
+  app.use(registroActividad);
+
   // ------------------------------ AUTH -------------------------------------
   app.post('/auth/login', validar(loginSchema), h(async (req, res) => {
     const { token, sesion } = await login({
@@ -44,6 +49,11 @@ export function crearApp() {
   app.get('/auth/yo', requiereSesion, h(async (req, res) => {
     res.json({ entidadId: req.sesion!.entidadId, usuarioId: req.sesion!.usuarioId, roles: req.sesion!.roles });
   }));
+
+  // ----------------------- REGISTRO DE ACTIVIDAD (ENS) ---------------------
+  app.get('/admin/registro-actividad', requiereSesion, requiereRol('ADMIN_ENTIDAD'),
+    h(async (req, res) => res.json(await listarActividad(ctxDe(req),
+      String(req.query.desde ?? '2000-01-01'), String(req.query.hasta ?? '2100-01-01')))));
 
   // -------------------------- ESTRUCTURA -----------------------------------
   app.use('/estructura', requiereSesion);

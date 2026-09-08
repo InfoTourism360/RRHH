@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { ZodTypeAny } from 'zod';
 import { resolverSesion, type SesionActiva } from '../auth/service.js';
+import { registrarActividad } from '../domain/registroActividad.js';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -46,4 +47,29 @@ export function validar(schema: ZodTypeAny) {
 /** Devuelve el contexto de tenant desde la sesión de la request. */
 export function ctxDe(req: Request) {
   return { entidadId: req.sesion!.entidadId, usuarioId: req.sesion!.usuarioId };
+}
+
+/**
+ * Registro de actividad (ENS): traza cada petición al finalizar la respuesta.
+ * No bloquea la petición. Omite el chequeo de salud para no ensuciar el log.
+ */
+export function registroActividad(req: Request, res: Response, next: NextFunction) {
+  if (req.path === '/salud') return next();
+  res.on('finish', () => {
+    const esLogin = req.path === '/auth/login';
+    const accion = esLogin
+      ? (res.statusCode < 400 ? 'LOGIN_OK' : 'LOGIN_FALLO')
+      : (req.method === 'GET' ? 'ACCESO' : 'CAMBIO');
+    void registrarActividad({
+      entidadId: req.sesion?.entidadId ?? null,
+      usuarioId: req.sesion?.usuarioId ?? null,
+      accion,
+      metodo: req.method,
+      ruta: req.path,
+      estadoHttp: res.statusCode,
+      ip: req.ip ?? null,
+      userAgent: req.header('user-agent') ?? null,
+    });
+  });
+  next();
 }

@@ -4,13 +4,17 @@ SaaS de gestión de RRHH para entidades locales españolas. Sustituye papel y Ex
 **no** la nómina. Sin biometría, con registro inmutable, multi-tenant aislado y
 orientado a ENS categoría MEDIA.
 
-## Estado
+## Estado (MVP completo)
 
-- **Fase 1 — Estructura, multi-tenant, auth, auditoría**: implementada (backend).
-- Fases 2–5: pendientes (control horario, ausencias, portal, cumplimiento ENS).
+- **Fase 1 — Estructura organizativa, multi-tenant, auth, auditoría** ✅
+- **Fase 2 — Control horario** (fichaje inmutable, correcciones, totalización, export PDF/CSV) ✅
+- **Fase 3 — Vacaciones y permisos** (motor de reglas, calendario, flujo de aprobación) ✅
+- **Fase 4 — Portal del empleado** (PWA React accesible WCAG 2.1 AA) ✅
+- **Fase 5 — Cumplimiento y preparación ENS** (registro de actividad, copias, documentación) ✅
 
-Ver diseño en [docs/decisiones-arquitectura.md](docs/decisiones-arquitectura.md) y
-[docs/esquema-propuesto.sql](docs/esquema-propuesto.sql).
+Ver diseño en [docs/decisiones-arquitectura.md](docs/decisiones-arquitectura.md),
+[docs/esquema-propuesto.sql](docs/esquema-propuesto.sql) y la documentación de
+cumplimiento en [docs/cumplimiento/](docs/cumplimiento/anexo-ii-ens-mapa.md).
 
 ## Requisitos
 
@@ -40,9 +44,21 @@ npm test
 
 # 7) API en desarrollo
 npm run dev:api   # http://localhost:3001/salud
+
+# 8) Portal del empleado (PWA) en desarrollo
+npm run dev -w @rrhh/web   # http://localhost:5173 (proxy /api -> :3001)
 ```
 
-Login de demo tras el seed: `admin@villademo.es` / `Demo1234!` (CIF `P4600001A`).
+Logins de demo tras el seed (CIF `P4600001A`):
+- Administrador: `admin@villademo.es` / `Demo1234!`
+- Empleado (portal): `empleado@villademo.es` / `Demo1234!` (PIN de quiosco `1234`)
+
+## Copias de seguridad (ENS)
+
+```bash
+scripts/backup.sh ./backups                       # copia con hash de integridad
+scripts/restore.sh ./backups/rrhh_XXXX.dump       # prueba de restauración en BD aparte
+```
 
 ## Arquitectura (resumen)
 

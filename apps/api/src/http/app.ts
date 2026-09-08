@@ -5,6 +5,7 @@ import * as est from '../domain/estructura.js';
 import { ctxDe, requiereRol, requiereSesion, validar } from './middleware.js';
 import { rutasHorario } from './horario.js';
 import { rutasAusencias } from './ausencias.js';
+import { rutasPortal } from './portal.js';
 import {
   cambioSituacionSchema, ceseSchema, loginSchema, personaSchema,
   plazaSchema, puestoSchema, relacionSchema, unidadSchema,
@@ -19,7 +20,8 @@ const GESTION = ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'];
 
 export function crearApp() {
   const app = express();
-  app.use(express.json({ limit: '256kb' }));
+  // 8 MB para permitir la subida de documentos en base64 (p. ej. nóminas PDF).
+  app.use(express.json({ limit: '8mb' }));
 
   app.get('/salud', (_req, res) => res.json({ ok: true }));
 
@@ -88,6 +90,9 @@ export function crearApp() {
 
   // ------------------------ VACACIONES Y PERMISOS --------------------------
   app.use('/ausencias', requiereSesion, rutasAusencias());
+
+  // --------------------------- PORTAL EMPLEADO -----------------------------
+  app.use('/portal', requiereSesion, rutasPortal());
 
   // ------------------------- MANEJO DE ERRORES -----------------------------
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

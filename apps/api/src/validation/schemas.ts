@@ -144,6 +144,17 @@ export const tipoAusenciaUpdateSchema = z
   })
   .strict();
 
+export const publicarDocSchema = z
+  .object({
+    personaId: z.string().uuid(),
+    tipo: z.enum(['NOMINA', 'CERTIFICADO', 'COMUNICACION', 'OTRO']),
+    titulo: z.string().min(1).max(200),
+    nombreFichero: z.string().min(1).max(200),
+    mime: z.string().max(100).optional(),
+    contenidoBase64: z.string().min(1),
+  })
+  .strict();
+
 export const asignarSaldoSchema = z
   .object({
     personaId: z.string().uuid(),

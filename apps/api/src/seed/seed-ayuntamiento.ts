@@ -1,5 +1,7 @@
 import { ownerPool, conTenant, cerrarPools } from '../db/pool.js';
 import * as est from '../domain/estructura.js';
+import * as aus from '../domain/ausencias.js';
+import { crearFestivo } from '../domain/calendario.js';
 import { hashearPassword } from '../auth/passwords.js';
 
 // -----------------------------------------------------------------------------
@@ -193,10 +195,41 @@ async function main() {
     ocupaEfectivo: true,
   });
 
+  // --- Fase 3: catálogo de ausencias, calendario laboral y saldos ---
+  await aus.precargarCatalogo(ctx);
+  const festivos2025: [string, string, string][] = [
+    ['2025-01-01', 'Año Nuevo', 'NACIONAL'],
+    ['2025-01-06', 'Epifanía del Señor', 'NACIONAL'],
+    ['2025-04-18', 'Viernes Santo', 'NACIONAL'],
+    ['2025-05-01', 'Fiesta del Trabajo', 'NACIONAL'],
+    ['2025-08-15', 'Asunción de la Virgen', 'NACIONAL'],
+    ['2025-10-12', 'Fiesta Nacional de España', 'NACIONAL'],
+    ['2025-11-01', 'Todos los Santos', 'NACIONAL'],
+    ['2025-12-06', 'Día de la Constitución', 'NACIONAL'],
+    ['2025-12-08', 'Inmaculada Concepción', 'NACIONAL'],
+    ['2025-12-25', 'Natividad del Señor', 'NACIONAL'],
+    ['2025-03-19', 'San José (autonómico)', 'AUTONOMICO'],
+    ['2025-06-24', 'Fiesta local de Villademo', 'LOCAL'],
+    ['2025-09-08', 'Fiesta local de Villademo', 'LOCAL'],
+  ];
+  for (const [f, den, amb] of festivos2025) {
+    await crearFestivo(ctx, { fecha: f, denominacion: den, ambito: amb });
+  }
+  // Saldos 2025 para toda la plantilla (vacaciones 22 hábiles + 6 asuntos particulares).
+  const personas = await conTenant(ctx, async (ej) =>
+    (await ej.query<{ id: string }>('SELECT id FROM persona')).rows);
+  for (const p of personas) {
+    await aus.asignarSaldo(ctx, { personaId: p.id, tipoCodigo: 'VACACIONES', anio: 2025, dias: 22 });
+    await aus.asignarSaldo(ctx, { personaId: p.id, tipoCodigo: 'ASUNTOS_PART', anio: 2025, dias: 6 });
+  }
+
   const resumen = await conTenant(ctx, async (ej) => {
     const p = await ej.query('SELECT count(*) FROM persona');
     const v = await ej.query('SELECT count(*) FROM v_plaza_estado WHERE vacante');
-    return { personas: p.rows[0]!.count, plazasVacantes: v.rows[0]!.count };
+    const ti = await ej.query('SELECT count(*) FROM tipo_ausencia');
+    const fe = await ej.query('SELECT count(*) FROM calendario_festivo');
+    return { personas: p.rows[0]!.count, plazasVacantes: v.rows[0]!.count,
+             tiposAusencia: ti.rows[0]!.count, festivos: fe.rows[0]!.count };
   });
 
   console.log('Seed completado:', {

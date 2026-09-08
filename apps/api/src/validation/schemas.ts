@@ -110,3 +110,45 @@ export const correccionSchema = z
 export const pinSchema = z.object({ pin: z.string().regex(/^\d{4,8}$/) }).strict();
 
 export const rangoSchema = z.object({ desde: fecha, hasta: fecha }).strict();
+
+// --------------------------------- AUSENCIAS --------------------------------
+export const solicitudSchema = z
+  .object({
+    tipoCodigo: z.string().min(1).max(40),
+    fechaInicio: fecha,
+    fechaFin: fecha,
+    horas: z.number().min(0).max(24).nullable().optional(),
+    observaciones: z.string().max(500).nullable().optional(),
+  })
+  .strict();
+
+export const denegarSchema = z.object({ motivo: z.string().min(3).max(500) }).strict();
+
+export const festivoSchema = z
+  .object({
+    fecha,
+    denominacion: z.string().min(1).max(200),
+    ambito: z.enum(['NACIONAL', 'AUTONOMICO', 'LOCAL']),
+  })
+  .strict();
+
+export const tipoAusenciaUpdateSchema = z
+  .object({
+    denominacion: z.string().min(1).max(200).optional(),
+    requiereJustificante: z.boolean().optional(),
+    requierePreaviso: z.boolean().optional(),
+    diasPreaviso: z.number().int().min(0).max(90).optional(),
+    aprobador: z.enum(['RESPONSABLE_UNIDAD', 'GESTOR_PERSONAL', 'AUTOMATICO']).optional(),
+    permiteSolapamiento: z.boolean().optional(),
+    activo: z.boolean().optional(),
+  })
+  .strict();
+
+export const asignarSaldoSchema = z
+  .object({
+    personaId: z.string().uuid(),
+    tipoCodigo: z.string().min(1).max(40),
+    anio: z.number().int().min(2000).max(2100),
+    dias: z.number().min(0).max(366),
+  })
+  .strict();

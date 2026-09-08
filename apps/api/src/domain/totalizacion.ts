@@ -77,6 +77,7 @@ export interface DiaTotalizado {
   teoricoMin: number;
   saldoMin: number;
   esFestivo: boolean;
+  esAusencia: boolean;
   extrasMin: number;
   festivoMin: number;
 }
@@ -97,6 +98,7 @@ export async function totalizar(
   desde: string,
   hasta: string,
   esFestivo?: EsFestivo,
+  diasAusencia?: Set<string>,
 ): Promise<Totalizacion> {
   return conTenant(ctx, async (ej: Ejecutor) => {
     const pol: PoliticasEntidad = await leerPoliticas(ej, ctx.entidadId);
@@ -117,20 +119,26 @@ export async function totalizar(
       const k = fechaLocal(e.momento);
       (porDia.get(k) ?? porDia.set(k, []).get(k)!).push(e);
     }
+    // Une los días con eventos y los días de ausencia aprobada (aunque no fichara).
+    const clavesDia = new Set<string>([...porDia.keys(), ...(diasAusencia ?? [])]);
 
     const dias: DiaTotalizado[] = [];
-    for (const [fecha, evs] of [...porDia.entries()].sort()) {
-      const { presencia, pausa } = minutosTrabajados(evs);
+    for (const fecha of [...clavesDia].sort()) {
+      const { presencia, pausa } = minutosTrabajados(porDia.get(fecha) ?? []);
       const trabajado = Math.max(0, presencia - pausa);
       const teorico = minutosTeoricos(pol, new Date(`${fecha}T00:00:00`));
       const festivo = (esFestivo?.(fecha) ?? false) || teorico === 0;
+      const ausencia = diasAusencia?.has(fecha) ?? false;
+      // Un día de ausencia aprobada cubre la jornada teórica: saldo neutro.
+      const saldo = ausencia ? 0 : trabajado - teorico;
       dias.push({
         fecha,
         trabajadoMin: trabajado,
         teoricoMin: teorico,
-        saldoMin: trabajado - teorico,
+        saldoMin: saldo,
         esFestivo: festivo,
-        extrasMin: festivo ? 0 : Math.max(0, trabajado - teorico),
+        esAusencia: ausencia,
+        extrasMin: festivo || ausencia ? 0 : Math.max(0, trabajado - teorico),
         festivoMin: festivo ? trabajado : 0,
       });
     }

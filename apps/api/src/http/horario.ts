@@ -2,6 +2,8 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { conTenant } from '../db/pool.js';
 import { fichar, corregirFichaje, listarFichajes, notificacionesDe } from '../domain/fichaje.js';
 import { totalizar } from '../domain/totalizacion.js';
+import { festivosEnRango } from '../domain/calendario.js';
+import { diasAusenciaAprobada } from '../domain/ausencias.js';
 import { informeCSV, informePDF, hashInforme, type MetaInforme } from '../domain/export/informe.js';
 import { ExportadorInspeccionProvisional } from '../domain/export/inspeccion.js';
 import { autenticarQuiosco, establecerPin } from '../auth/service.js';
@@ -29,6 +31,14 @@ function personaObjetivo(req: Request): string {
   const propia = req.sesion?.personaId;
   if (!propia) throw Object.assign(new Error('El usuario no tiene ficha de persona asociada.'), { status: 400 });
   return propia;
+}
+
+// Construye los predicados de festivo y ausencia para totalizar (integra Fase 3).
+async function contextoCalendario(entidadId: string, personaId: string, desde: string, hasta: string) {
+  const ctx = { entidadId, usuarioId: null };
+  const festivos = await conTenant(ctx, (ej) => festivosEnRango(ej, desde, hasta));
+  const ausencias = await diasAusenciaAprobada(ctx, personaId, desde, hasta);
+  return { esFestivo: (f: string) => festivos.has(f), diasAusencia: ausencias };
 }
 
 async function metaInforme(entidadId: string, personaId: string): Promise<MetaInforme> {
@@ -103,13 +113,17 @@ export function rutasHorario(): Router {
   // Totalización (propia; terceros solo con rol de gestión/responsable/RLT).
   r.get('/totalizacion', validar_query(rangoSchema), h(async (req, res) => {
     const personaId = personaObjetivo(req);
-    res.json(await totalizar(ctxDe(req), personaId, req.query.desde as string, req.query.hasta as string));
+    const desde = req.query.desde as string, hasta = req.query.hasta as string;
+    const cal = await contextoCalendario(req.sesion!.entidadId, personaId, desde, hasta);
+    res.json(await totalizar(ctxDe(req), personaId, desde, hasta, cal.esFestivo, cal.diasAusencia));
   }));
 
   // Exportación CSV con hash de integridad.
   r.get('/informe.csv', validar_query(rangoSchema), h(async (req, res) => {
     const personaId = personaObjetivo(req);
-    const t = await totalizar(ctxDe(req), personaId, req.query.desde as string, req.query.hasta as string);
+    const desde = req.query.desde as string, hasta = req.query.hasta as string;
+    const cal = await contextoCalendario(req.sesion!.entidadId, personaId, desde, hasta);
+    const t = await totalizar(ctxDe(req), personaId, desde, hasta, cal.esFestivo, cal.diasAusencia);
     const meta = await metaInforme(req.sesion!.entidadId, personaId);
     const csv = informeCSV(t, meta);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -121,7 +135,9 @@ export function rutasHorario(): Router {
   // Exportación PDF con hash de integridad.
   r.get('/informe.pdf', validar_query(rangoSchema), h(async (req, res) => {
     const personaId = personaObjetivo(req);
-    const t = await totalizar(ctxDe(req), personaId, req.query.desde as string, req.query.hasta as string);
+    const desde = req.query.desde as string, hasta = req.query.hasta as string;
+    const cal = await contextoCalendario(req.sesion!.entidadId, personaId, desde, hasta);
+    const t = await totalizar(ctxDe(req), personaId, desde, hasta, cal.esFestivo, cal.diasAusencia);
     const meta = await metaInforme(req.sesion!.entidadId, personaId);
     const pdf = await informePDF(t, meta);
     res.setHeader('Content-Type', 'application/pdf');
@@ -133,7 +149,9 @@ export function rutasHorario(): Router {
   // Interoperabilidad Inspección de Trabajo (aislada tras interfaz; provisional).
   r.get('/inspeccion', requiereRol(...GESTION), validar_query(rangoSchema), h(async (req, res) => {
     const personaId = personaObjetivo(req);
-    const t = await totalizar(ctxDe(req), personaId, req.query.desde as string, req.query.hasta as string);
+    const desde = req.query.desde as string, hasta = req.query.hasta as string;
+    const cal = await contextoCalendario(req.sesion!.entidadId, personaId, desde, hasta);
+    const t = await totalizar(ctxDe(req), personaId, desde, hasta, cal.esFestivo, cal.diasAusencia);
     const meta = await metaInforme(req.sesion!.entidadId, personaId);
     const exportador = new ExportadorInspeccionProvisional();
     const cif = await conTenant(ctxDe(req), async (ej) => {

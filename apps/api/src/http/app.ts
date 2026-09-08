@@ -4,6 +4,7 @@ import { ErrorDominio } from '../domain/estructura.js';
 import * as est from '../domain/estructura.js';
 import { ctxDe, requiereRol, requiereSesion, validar } from './middleware.js';
 import { rutasHorario } from './horario.js';
+import { rutasAusencias } from './ausencias.js';
 import {
   cambioSituacionSchema, ceseSchema, loginSchema, personaSchema,
   plazaSchema, puestoSchema, relacionSchema, unidadSchema,
@@ -84,6 +85,9 @@ export function crearApp() {
 
   // -------------------------- CONTROL HORARIO ------------------------------
   app.use('/horario', rutasHorario());
+
+  // ------------------------ VACACIONES Y PERMISOS --------------------------
+  app.use('/ausencias', requiereSesion, rutasAusencias());
 
   // ------------------------- MANEJO DE ERRORES -----------------------------
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

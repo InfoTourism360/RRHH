@@ -1,0 +1,22 @@
+{
+  "name": "rrhh-sector-publico",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Plataforma SaaS de gestión de RRHH para entidades locales españolas (MVP)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "migrate": "npm run migrate -w @rrhh/api",
+    "seed": "npm run seed -w @rrhh/api",
+    "test": "npm run test -w @rrhh/api",
+    "dev:api": "npm run dev -w @rrhh/api",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

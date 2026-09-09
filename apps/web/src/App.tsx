@@ -3,6 +3,7 @@ import { useAuth } from './auth';
 import { Layout } from './Layout';
 import { Cargando } from './ui';
 import { Login } from './pages/Login';
+import { Panel } from './pages/Panel';
 import { Inicio } from './pages/Inicio';
 import { MisFichajes } from './pages/MisFichajes';
 import { MisAusencias } from './pages/MisAusencias';
@@ -27,10 +28,14 @@ export function App() {
     );
   }
 
+  const esGestion = yo.roles.some((r) => ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'].includes(r.rol));
+
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Inicio />} />
+        <Route path="/" element={esGestion ? <Panel /> : <Inicio />} />
+        <Route path="/panel" element={<Panel />} />
+        <Route path="/inicio" element={<Inicio />} />
         <Route path="/fichajes" element={<MisFichajes />} />
         <Route path="/ausencias" element={<MisAusencias />} />
         <Route path="/calendario" element={<MiCalendario />} />

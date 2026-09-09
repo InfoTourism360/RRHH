@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
 
-const ENLACES = [
+const ENLACES_EMPLEADO = [
   { a: '/', txt: 'Inicio' },
   { a: '/fichajes', txt: 'Mis fichajes' },
   { a: '/ausencias', txt: 'Mis ausencias' },
@@ -10,11 +10,17 @@ const ENLACES = [
   { a: '/documentos', txt: 'Mis documentos' },
   { a: '/datos', txt: 'Mis datos' },
 ];
+const ENLACES_GESTION = [
+  { a: '/', txt: 'Cuadro de mando' },
+  { a: '/inicio', txt: 'Mi espacio' },
+];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { salir, yo } = useAuth();
   const loc = useLocation();
   const mainRef = useRef<HTMLElement>(null);
+  const esGestion = !!yo?.roles.some((r) => ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'].includes(r.rol));
+  const ENLACES = esGestion ? ENLACES_GESTION : ENLACES_EMPLEADO;
 
   // Al cambiar de ruta, lleva el foco al contenido principal (accesibilidad SPA).
   useEffect(() => {
@@ -27,7 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <header className="bg-marca text-white">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <span className="font-bold text-lg">Portal del empleado</span>
+          <span className="font-bold text-lg">{esGestion ? 'Gestión de personal' : 'Portal del empleado'}</span>
           <button onClick={() => void salir()}
                   className="rounded bg-white/15 hover:bg-white/25 px-3 py-1.5 font-medium">
             Cerrar sesión

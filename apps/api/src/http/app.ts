@@ -4,6 +4,7 @@ import { ErrorDominio } from '../domain/estructura.js';
 import * as est from '../domain/estructura.js';
 import { ctxDe, requiereRol, requiereSesion, validar, registroActividad } from './middleware.js';
 import { listarActividad } from '../domain/registroActividad.js';
+import { panelDireccion } from '../domain/panel.js';
 import { rutasHorario } from './horario.js';
 import { rutasAusencias } from './ausencias.js';
 import { rutasPortal } from './portal.js';
@@ -49,6 +50,10 @@ export function crearApp() {
   app.get('/auth/yo', requiereSesion, h(async (req, res) => {
     res.json({ entidadId: req.sesion!.entidadId, usuarioId: req.sesion!.usuarioId, roles: req.sesion!.roles });
   }));
+
+  // ----------------------- CUADRO DE MANDO (gestión) -----------------------
+  app.get('/admin/panel', requiereSesion, requiereRol('ADMIN_ENTIDAD', 'GESTOR_PERSONAL'),
+    h(async (req, res) => res.json(await panelDireccion(ctxDe(req)))));
 
   // ----------------------- REGISTRO DE ACTIVIDAD (ENS) ---------------------
   app.get('/admin/registro-actividad', requiereSesion, requiereRol('ADMIN_ENTIDAD'),

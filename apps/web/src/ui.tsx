@@ -1,4 +1,4 @@
-import { useId, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes } from 'react';
+import { useEffect, useId, useRef, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes } from 'react';
 
 export function minAHoras(min: number | undefined | null): string {
   if (min == null) return '—';
@@ -97,6 +97,65 @@ export function Cargando({ texto = 'Cargando…' }: { texto?: string }) {
     <div role="status" aria-live="polite" className="flex items-center gap-3 text-apagado">
       <span className="w-4 h-4 rounded-full border-2 border-marca-300 border-t-marca-600 animate-spin" aria-hidden="true" />
       {texto}
+    </div>
+  );
+}
+
+export function Modal({ titulo, children, onCerrar }: { titulo: string; children: ReactNode; onCerrar: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const id = useId();
+  useEffect(() => {
+    ref.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCerrar(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onCerrar]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+      <div className="absolute inset-0 bg-tinta/50" onClick={onCerrar} aria-hidden="true" />
+      <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={id}
+           className="relative bg-white rounded-xl2 shadow-flotante border border-linea w-full max-w-lg my-8 outline-none">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-linea">
+          <h2 id={id} className="text-lg font-bold">{titulo}</h2>
+          <button onClick={onCerrar} aria-label="Cerrar" className="text-apagado hover:text-tinta text-xl leading-none px-2">×</button>
+        </div>
+        <div className="px-6 py-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export interface Columna<T> { k: string; txt: string; render?: (fila: T) => ReactNode; alinear?: 'der' }
+export function Tabla<T extends object>(
+  { columnas, filas, vacio = 'Sin datos.' }: { columnas: Columna<T>[]; filas: T[]; vacio?: string },
+) {
+  if (filas.length === 0) return <p className="text-apagado">{vacio}</p>;
+  const val = (f: T, k: string) => (f as Record<string, unknown>)[k];
+  return (
+    <div className="overflow-x-auto -mx-1">
+      <table className="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-linea">
+            {columnas.map((c) => (
+              <th key={c.k} scope="col"
+                  className={`py-2.5 px-2 font-semibold text-apagado uppercase text-xs tracking-wide ${c.alinear === 'der' ? 'text-right' : ''}`}>
+                {c.txt}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((f, i) => (
+            <tr key={(val(f, 'id') as string) ?? i} className="border-b border-linea/70 hover:bg-lienzo">
+              {columnas.map((c) => (
+                <td key={c.k} className={`py-2.5 px-2 ${c.alinear === 'der' ? 'text-right num' : ''}`}>
+                  {c.render ? c.render(f) : String(val(f, c.k) ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -49,7 +49,7 @@ async function main() {
 
   const ent = await ownerPool.query<{ id: string }>(
     `INSERT INTO entidad (cif, nombre, politicas)
-     VALUES ($1, 'Ayuntamiento de Villademo', '{"geocerca": false}'::jsonb) RETURNING id`,
+     VALUES ($1, 'Entidad de demostración', '{"geocerca": false}'::jsonb) RETURNING id`,
     [CIF],
   );
   const entidadId = ent.rows[0]!.id;
@@ -58,12 +58,12 @@ async function main() {
   // Usuario administrador (login de demo).
   const hash = await hashearPassword('Demo1234!');
   await ownerPool.query(
-    `INSERT INTO usuario (entidad_id, email, password_hash) VALUES ($1, 'admin@villademo.es', $2)`,
+    `INSERT INTO usuario (entidad_id, email, password_hash) VALUES ($1, 'admin@demo.es', $2)`,
     [entidadId, hash],
   );
   await ownerPool.query(
     `INSERT INTO usuario_rol (entidad_id, usuario_id, rol_codigo)
-     SELECT $1, id, 'ADMIN_ENTIDAD' FROM usuario WHERE entidad_id = $1 AND email = 'admin@villademo.es'`,
+     SELECT $1, id, 'ADMIN_ENTIDAD' FROM usuario WHERE entidad_id = $1 AND email = 'admin@demo.es'`,
     [entidadId],
   );
 
@@ -113,7 +113,7 @@ async function main() {
         nombre,
         apellido1: ap1,
         apellido2: ap2,
-        emailCorp: `${nombre}.${ap1}${nDoc}@villademo.es`.toLowerCase(),
+        emailCorp: `${nombre}.${ap1}${nDoc}@demo.es`.toLowerCase(),
       });
       const rel = await est.crearRelacion(ctx, {
         personaId: persona.id as string,
@@ -211,8 +211,8 @@ async function main() {
     ['12-08', 'Inmaculada Concepción', 'NACIONAL'],
     ['12-25', 'Natividad del Señor', 'NACIONAL'],
     ['03-19', 'San José (autonómico)', 'AUTONOMICO'],
-    ['06-24', 'Fiesta local de Villademo', 'LOCAL'],
-    ['09-08', 'Fiesta local de Villademo', 'LOCAL'],
+    ['06-24', 'Fiesta local', 'LOCAL'],
+    ['09-08', 'Fiesta local', 'LOCAL'],
   ];
   for (const [mmdd, den, amb] of festivosMMDD) {
     await crearFestivo(ctx, { fecha: `${anio}-${mmdd}`, denominacion: den, ambito: amb });
@@ -230,7 +230,7 @@ async function main() {
   const hashEmp = await hashearPassword('Demo1234!');
   const ue = await ownerPool.query<{ id: string }>(
     `INSERT INTO usuario (entidad_id, persona_id, email, password_hash)
-     VALUES ($1,$2,'empleado@villademo.es',$3) RETURNING id`,
+     VALUES ($1,$2,'empleado@demo.es',$3) RETURNING id`,
     [entidadId, empleado.personaId, hashEmp],
   );
   await ownerPool.query(
@@ -247,6 +247,25 @@ async function main() {
     nombreFichero: 'nomina_demo.pdf', contenido: pdfDemo,
   });
 
+  // Solicitudes de ausencia de ejemplo: varias pendientes de aprobación y una aprobada.
+  const anioSol = new Date().getFullYear();
+  const pendientesDe = [creados[3], creados[7], creados[12]].filter(Boolean);
+  let d0 = 5;
+  for (const c of pendientesDe) {
+    await aus.solicitar(ctx, {
+      personaId: c!.personaId, tipoCodigo: 'VACACIONES',
+      fechaInicio: `${anioSol}-12-${String(d0).padStart(2, '0')}`,
+      fechaFin: `${anioSol}-12-${String(d0 + 4).padStart(2, '0')}`,
+    });
+    d0 += 6;
+  }
+  // Una del propio empleado, aprobada, para poblar su calendario.
+  const solEmp = await aus.solicitar(ctx, {
+    personaId: empleado.personaId, tipoCodigo: 'ASUNTOS_PART',
+    fechaInicio: `${anioSol}-11-24`, fechaFin: `${anioSol}-11-25`,
+  });
+  await aus.aprobar({ entidadId, usuarioId: ue.rows[0]!.id }, solEmp.id as string);
+
   const resumen = await conTenant(ctx, async (ej) => {
     const p = await ej.query('SELECT count(*) FROM persona');
     const v = await ej.query('SELECT count(*) FROM v_plaza_estado WHERE vacante');
@@ -257,9 +276,9 @@ async function main() {
   });
 
   console.log('Seed completado:', {
-    entidad: 'Ayuntamiento de Villademo', cif: CIF,
-    adminLogin: 'admin@villademo.es / Demo1234!',
-    empleadoLogin: 'empleado@villademo.es / Demo1234! (PIN quiosco 1234)',
+    entidad: 'Entidad de demostración', cif: CIF,
+    adminLogin: 'admin@demo.es / Demo1234!',
+    empleadoLogin: 'empleado@demo.es / Demo1234! (PIN quiosco 1234)',
     ...resumen,
   });
 }

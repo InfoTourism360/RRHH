@@ -4,6 +4,10 @@ import { Layout } from './Layout';
 import { Cargando } from './ui';
 import { Login } from './pages/Login';
 import { Panel } from './pages/Panel';
+import { GesPlantilla } from './pages/GesPlantilla';
+import { GesAusencias } from './pages/GesAusencias';
+import { GesDocumentos } from './pages/GesDocumentos';
+import { GesActividad } from './pages/GesActividad';
 import { Inicio } from './pages/Inicio';
 import { MisFichajes } from './pages/MisFichajes';
 import { MisAusencias } from './pages/MisAusencias';
@@ -35,6 +39,10 @@ export function App() {
       <Routes>
         <Route path="/" element={esGestion ? <Panel /> : <Inicio />} />
         <Route path="/panel" element={<Panel />} />
+        {esGestion && <Route path="/plantilla" element={<GesPlantilla />} />}
+        {esGestion && <Route path="/aprobaciones" element={<GesAusencias />} />}
+        {esGestion && <Route path="/publicaciones" element={<GesDocumentos />} />}
+        {esGestion && <Route path="/actividad" element={<GesActividad />} />}
         <Route path="/inicio" element={<Inicio />} />
         <Route path="/fichajes" element={<MisFichajes />} />
         <Route path="/ausencias" element={<MisAusencias />} />

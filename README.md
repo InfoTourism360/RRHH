@@ -50,8 +50,8 @@ npm run dev -w @rrhh/web   # http://localhost:5173 (proxy /api -> :3001)
 ```
 
 Logins de demo tras el seed (CIF `P4600001A`):
-- Administrador: `admin@villademo.es` / `Demo1234!`
-- Empleado (portal): `empleado@villademo.es` / `Demo1234!` (PIN de quiosco `1234`)
+- Administrador: `admin@demo.es` / `Demo1234!`
+- Empleado (portal): `empleado@demo.es` / `Demo1234!` (PIN de quiosco `1234`)
 
 ## Copias de seguridad (ENS)
 

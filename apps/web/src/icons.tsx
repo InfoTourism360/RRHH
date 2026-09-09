@@ -18,3 +18,6 @@ export const IcoSalir = base('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4|M16 17l5-5
 export const IcoMenu = base('M4 6h16M4 12h16M4 18h16');
 export const IcoCerrar = base('M6 6l12 12M18 6L6 18');
 export const IcoInicio = base('M3 10.5 12 3l9 7.5|M5 9.5V21h14V9.5');
+export const IcoPlantilla = base('M3 21h18|M5 21V7l7-4 7 4v14|M9 21v-4h6v4|M9 11h.01M15 11h.01M9 14h.01M15 14h.01');
+export const IcoActividad = base('M3 12h4l2 6 4-14 2 8h6');
+export const IcoAprobar = base('M9 12l2 2 4-4|M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z');

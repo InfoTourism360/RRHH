@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
 import {
   IcoPanel, IcoReloj, IcoAusencias, IcoCalendario, IcoDoc, IcoUsuario,
-  IcoSalir, IcoMenu, IcoCerrar, IcoInicio,
+  IcoSalir, IcoMenu, IcoCerrar, IcoInicio, IcoPlantilla, IcoActividad, IcoAprobar,
 } from './icons';
 
 type Enlace = { a: string; txt: string; Ico: ComponentType<{ className?: string }> };
@@ -18,6 +18,10 @@ const NAV_EMPLEADO: Enlace[] = [
 ];
 const NAV_GESTION: Enlace[] = [
   { a: '/', txt: 'Cuadro de mando', Ico: IcoPanel },
+  { a: '/plantilla', txt: 'Plantilla y RPT', Ico: IcoPlantilla },
+  { a: '/aprobaciones', txt: 'Aprobaciones', Ico: IcoAprobar },
+  { a: '/publicaciones', txt: 'Documentos', Ico: IcoDoc },
+  { a: '/actividad', txt: 'Actividad', Ico: IcoActividad },
   { a: '/inicio', txt: 'Mi espacio', Ico: IcoInicio },
 ];
 

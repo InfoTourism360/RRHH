@@ -95,5 +95,9 @@ export function rutasPortal(): Router {
   r.get('/documentos/:id/acuses', requiereRol(...GESTION), h(async (req, res) =>
     res.json(await doc.acusesDocumento(ctxDe(req), String(req.params.id)))));
 
+  // Listado de documentos de una persona concreta (gestión).
+  r.get('/admin/documentos', requiereRol(...GESTION), h(async (req, res) =>
+    res.json(await doc.listarDocumentos(ctxDe(req), String(req.query.personaId)))));
+
   return r;
 }

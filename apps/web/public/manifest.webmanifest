@@ -1,13 +1,13 @@
 {
-  "name": "Portal del empleado — RRHH",
-  "short_name": "RRHH",
-  "description": "Fichaje, ausencias y documentos del personal",
+  "name": "Gestión de Personal — Sector Público",
+  "short_name": "Personal",
+  "description": "Fichaje, ausencias, documentos y cuadro de mando de personal",
   "lang": "es-ES",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0b5cab",
+  "background_color": "#f6f7fb",
+  "theme_color": "#4f46e5",
   "icons": [
     { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]

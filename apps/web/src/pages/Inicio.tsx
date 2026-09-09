@@ -35,7 +35,7 @@ export function Inicio() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Tarjeta titulo="Fichar">
             <p className="mb-3 text-gray-700">Registra tu jornada de hoy.</p>
-            <Link to="/fichajes" className="inline-block rounded bg-marca text-white font-semibold px-4 py-2 hover:bg-marca-oscuro">
+            <Link to="/fichajes" className="inline-block rounded bg-marca-600 text-white font-semibold px-4 py-2 hover:bg-marca-700">
               Ir a fichar
             </Link>
           </Tarjeta>
@@ -57,7 +57,7 @@ export function Inicio() {
               ))}
               {p.diasDisponibles.length === 0 && <li className="text-gray-600">Sin saldos asignados.</li>}
             </ul>
-            <Link to="/ausencias" className="mt-3 inline-block underline text-marca-oscuro">Solicitar ausencia</Link>
+            <Link to="/ausencias" className="mt-3 inline-block underline text-marca-700">Solicitar ausencia</Link>
           </Tarjeta>
 
           <Tarjeta titulo="Mis gestiones">

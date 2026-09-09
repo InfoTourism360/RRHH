@@ -19,13 +19,14 @@ const SITUACION: Record<string, string> = {
 };
 
 function Kpi({ label, num, foot, tono }: { label: string; num: string; foot?: string; tono?: 'ok' | 'warn' }) {
-  const barra = tono === 'ok' ? 'bg-exito' : tono === 'warn' ? 'bg-aviso' : 'bg-marca';
+  const punto = tono === 'ok' ? 'bg-exito' : tono === 'warn' ? 'bg-aviso' : 'bg-marca-500';
   return (
-    <div className="relative bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden p-4">
-      <span className={`absolute left-0 top-0 bottom-0 w-1 ${barra}`} aria-hidden="true" />
-      <div className="text-sm text-gray-600">{label}</div>
-      <div className="text-3xl font-bold tabular-nums mt-1" style={{ fontFamily: 'ui-monospace, monospace' }}>{num}</div>
-      {foot && <div className="text-xs text-gray-500 mt-0.5">{foot}</div>}
+    <div className="bg-white rounded-xl2 border border-linea shadow-tarjeta p-4">
+      <div className="flex items-center gap-2 text-xs font-semibold text-apagado uppercase tracking-wide">
+        <span className={`w-1.5 h-1.5 rounded-full ${punto}`} aria-hidden="true" />{label}
+      </div>
+      <div className="num text-[28px] leading-none font-bold mt-2.5">{num}</div>
+      {foot && <div className="text-xs text-tenue mt-1.5">{foot}</div>}
     </div>
   );
 }
@@ -41,8 +42,8 @@ export function Panel() {
   const k = p.kpis;
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1">Cuadro de mando de personal</h1>
-      <p className="text-gray-600 mb-6">Plantilla, RPT, control horario y ausencias — datos en vivo de tu entidad.</p>
+      <h1 className="text-[26px] font-extrabold mb-1">Cuadro de mando de personal</h1>
+      <p className="text-apagado mb-6">Plantilla, RPT, control horario y ausencias — datos en vivo de tu entidad.</p>
 
       <section aria-label="Indicadores clave" className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
         <Kpi label="Efectivos en activo" num={String(k.efectivos)} foot="relación vigente" tono="ok" />

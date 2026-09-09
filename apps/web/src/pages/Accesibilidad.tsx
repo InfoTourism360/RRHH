@@ -34,7 +34,7 @@ export function Accesibilidad() {
         procedimiento previsto en el artículo 13 del RD 1112/2018.
       </p>
 
-      <p className="mt-8"><a href="/" className="underline text-marca-oscuro">Volver al inicio</a></p>
+      <p className="mt-8"><a href="/" className="underline text-marca-700">Volver al inicio</a></p>
     </main>
   );
 }

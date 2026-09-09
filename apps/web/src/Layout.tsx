@@ -1,71 +1,123 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
+import {
+  IcoPanel, IcoReloj, IcoAusencias, IcoCalendario, IcoDoc, IcoUsuario,
+  IcoSalir, IcoMenu, IcoCerrar, IcoInicio,
+} from './icons';
 
-const ENLACES_EMPLEADO = [
-  { a: '/', txt: 'Inicio' },
-  { a: '/fichajes', txt: 'Mis fichajes' },
-  { a: '/ausencias', txt: 'Mis ausencias' },
-  { a: '/calendario', txt: 'Mi calendario' },
-  { a: '/documentos', txt: 'Mis documentos' },
-  { a: '/datos', txt: 'Mis datos' },
+type Enlace = { a: string; txt: string; Ico: ComponentType<{ className?: string }> };
+
+const NAV_EMPLEADO: Enlace[] = [
+  { a: '/', txt: 'Inicio', Ico: IcoInicio },
+  { a: '/fichajes', txt: 'Mis fichajes', Ico: IcoReloj },
+  { a: '/ausencias', txt: 'Mis ausencias', Ico: IcoAusencias },
+  { a: '/calendario', txt: 'Mi calendario', Ico: IcoCalendario },
+  { a: '/documentos', txt: 'Mis documentos', Ico: IcoDoc },
+  { a: '/datos', txt: 'Mis datos', Ico: IcoUsuario },
 ];
-const ENLACES_GESTION = [
-  { a: '/', txt: 'Cuadro de mando' },
-  { a: '/inicio', txt: 'Mi espacio' },
+const NAV_GESTION: Enlace[] = [
+  { a: '/', txt: 'Cuadro de mando', Ico: IcoPanel },
+  { a: '/inicio', txt: 'Mi espacio', Ico: IcoInicio },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { salir, yo } = useAuth();
   const loc = useLocation();
   const mainRef = useRef<HTMLElement>(null);
+  const [abierto, setAbierto] = useState(false);
   const esGestion = !!yo?.roles.some((r) => ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'].includes(r.rol));
-  const ENLACES = esGestion ? ENLACES_GESTION : ENLACES_EMPLEADO;
+  const nav = esGestion ? NAV_GESTION : NAV_EMPLEADO;
+  const rolTxt = esGestion ? 'Gestión de personal' : 'Empleado';
 
-  // Al cambiar de ruta, lleva el foco al contenido principal (accesibilidad SPA).
-  useEffect(() => {
-    mainRef.current?.focus();
-  }, [loc.pathname]);
+  useEffect(() => { mainRef.current?.focus(); setAbierto(false); }, [loc.pathname]);
+
+  const Aside = (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/10">
+        <span className="grid place-items-center w-9 h-9 rounded-xl bg-white/15 text-white font-extrabold">GP</span>
+        <div className="leading-tight">
+          <div className="text-white font-bold">Gestión de Personal</div>
+          <div className="text-[11px] text-white/60 tracking-wide uppercase">Sector público</div>
+        </div>
+        <button className="ml-auto lg:hidden text-white/80 hover:text-white p-1" onClick={() => setAbierto(false)}
+                aria-label="Cerrar menú"><IcoCerrar /></button>
+      </div>
+
+      <nav aria-label="Navegación principal" className="flex-1 px-3 py-4 overflow-y-auto">
+        <ul className="space-y-1">
+          {nav.map((e) => (
+            <li key={e.a}>
+              <NavLink to={e.a} end={e.a === '/'}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
+                <e.Ico /> {e.txt}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className="p-3 border-t border-white/10">
+        <div className="flex items-center gap-3 px-2 py-2">
+          <span className="grid place-items-center w-9 h-9 rounded-full bg-white/15 text-white text-sm font-semibold">
+            {rolTxt.charAt(0)}
+          </span>
+          <div className="min-w-0">
+            <div className="text-white text-sm font-medium truncate">{rolTxt}</div>
+            <div className="text-white/55 text-xs truncate">Sesión activa</div>
+          </div>
+        </div>
+        <button onClick={() => void salir()}
+          className="mt-1 w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white">
+          <IcoSalir /> Cerrar sesión
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr] bg-lienzo">
       <a href="#contenido" className="salto-contenido">Saltar al contenido principal</a>
 
-      <header className="bg-marca text-white">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <span className="font-bold text-lg">{esGestion ? 'Gestión de personal' : 'Portal del empleado'}</span>
-          <button onClick={() => void salir()}
-                  className="rounded bg-white/15 hover:bg-white/25 px-3 py-1.5 font-medium">
-            Cerrar sesión
+      {/* Sidebar fijo en escritorio */}
+      <aside className="hidden lg:block bg-marca-800 bg-gradient-to-b from-marca-700 to-marca-800">
+        <div className="sticky top-0 h-screen">{Aside}</div>
+      </aside>
+
+      {/* Drawer móvil */}
+      {abierto && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-tinta/50" onClick={() => setAbierto(false)} aria-hidden="true" />
+          <div className="absolute inset-y-0 left-0 w-72 bg-gradient-to-b from-marca-700 to-marca-800 shadow-flotante">
+            {Aside}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col min-w-0">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 h-16 bg-white/90 backdrop-blur border-b border-linea flex items-center gap-3 px-4 lg:px-8">
+          <button className="lg:hidden text-tinta p-1.5 -ml-1.5" onClick={() => setAbierto(true)} aria-label="Abrir menú">
+            <IcoMenu />
           </button>
-        </div>
-        <nav aria-label="Navegación principal" className="bg-marca-oscuro">
-          <ul className="max-w-5xl mx-auto px-2 flex flex-wrap">
-            {ENLACES.map((e) => (
-              <li key={e.a}>
-                <NavLink to={e.a} end={e.a === '/'}
-                  className={({ isActive }) =>
-                    `block px-3 py-2 border-b-4 ${isActive ? 'border-white font-semibold' : 'border-transparent hover:border-white/50'}`}
-                  aria-current={undefined}>
-                  {e.txt}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </header>
+          <span className="lg:hidden font-bold">Gestión de Personal</span>
+          <span className="ml-auto hidden sm:inline-flex items-center gap-2 text-xs font-medium text-apagado bg-lienzo border border-linea rounded-full px-3 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-exito" /> Entorno de demostración
+          </span>
+        </header>
 
-      <main id="contenido" ref={mainRef} tabIndex={-1}
-            className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 outline-none">
-        {children}
-      </main>
+        <main id="contenido" ref={mainRef} tabIndex={-1}
+              className="flex-1 px-4 py-6 lg:px-8 lg:py-8 outline-none max-w-[1200px] w-full mx-auto">
+          {children}
+        </main>
 
-      <footer className="bg-gray-100 text-gray-600 text-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap gap-x-4 gap-y-1 justify-between">
-          <span>Entidad: {yo?.entidadId ? 'sesión activa' : '—'}</span>
-          <a href="/accesibilidad" className="underline text-marca-oscuro">Declaración de accesibilidad</a>
-        </div>
-      </footer>
+        <footer className="px-4 lg:px-8 py-4 text-xs text-tenue flex flex-wrap gap-x-4 gap-y-1 justify-between border-t border-linea">
+          <span>Datos de demostración · Registro horario inmutable · ENS categoría media · RGPD</span>
+          <a href="/accesibilidad" className="underline hover:text-marca-700">Declaración de accesibilidad</a>
+        </footer>
+      </div>
     </div>
   );
 }

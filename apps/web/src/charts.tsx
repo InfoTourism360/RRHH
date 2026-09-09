@@ -1,6 +1,7 @@
 // Gráficas SVG ligeras (sin dependencias), accesibles con role/aria-label.
-const AZUL = '#0b5cab';
-const PALETA = ['#0b5cab', '#0e8f9a', '#c9861a', '#7a5bd0', '#4b83da', '#2fa088'];
+const AZUL = '#4f46e5';
+const PALETA = ['#4f46e5', '#0ea5e9', '#f59e0b', '#8b5cf6', '#14b8a6', '#ec4899'];
+const REJILLA = '#eef1f6', EJE = '#94a3b8', TINTA = '#0f172a', PISTA = '#eef2ff';
 
 interface Dato { k: string; v: number }
 
@@ -17,8 +18,8 @@ export function BarrasVertical({ datos, etiqueta }: { datos: Dato[]; etiqueta: s
         const y = padT + plotH - (i / niceMax) * plotH;
         return (
           <g key={i}>
-            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="#e2e8f0" />
-            <text x={padL - 8} y={y + 4} fontSize="11" fill="#8595ad" textAnchor="end" fontFamily="monospace">{i}</text>
+            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke={REJILLA} />
+            <text x={padL - 8} y={y + 4} fontSize="11" fill={EJE} textAnchor="end" fontFamily="monospace">{i}</text>
           </g>
         );
       })}
@@ -27,8 +28,8 @@ export function BarrasVertical({ datos, etiqueta }: { datos: Dato[]; etiqueta: s
         return (
           <g key={d.k}>
             <rect x={x} y={y} width={w} height={h} rx="5" fill={AZUL} />
-            <text x={x + w / 2} y={y - 6} fontSize="11.5" fill="#16233d" textAnchor="middle" fontFamily="monospace" fontWeight="600">{d.v}</text>
-            <text x={x + w / 2} y={H - 12} fontSize="12" fill="#5a6a86" textAnchor="middle">{d.k}</text>
+            <text x={x + w / 2} y={y - 6} fontSize="11.5" fill={TINTA} textAnchor="middle" fontFamily="monospace" fontWeight="600">{d.v}</text>
+            <text x={x + w / 2} y={H - 12} fontSize="12" fill="#64748b" textAnchor="middle">{d.k}</text>
           </g>
         );
       })}
@@ -46,10 +47,10 @@ export function BarrasHorizontal({ datos, etiqueta }: { datos: Dato[]; etiqueta:
         const y = padT + i * rowH, w = (d.v / max) * plotW;
         return (
           <g key={d.k}>
-            <text x={padL - 10} y={y + rowH / 2 + 4} fontSize="12" fill="#5a6a86" textAnchor="end">{d.k}</text>
-            <rect x={padL} y={y + 5} width={plotW} height={rowH - 12} rx="5" fill="#eef2f7" />
+            <text x={padL - 10} y={y + rowH / 2 + 4} fontSize="12" fill="#64748b" textAnchor="end">{d.k}</text>
+            <rect x={padL} y={y + 5} width={plotW} height={rowH - 12} rx="5" fill={PISTA} />
             <rect x={padL} y={y + 5} width={Math.max(w, 2)} height={rowH - 12} rx="5" fill={AZUL} />
-            <text x={padL + Math.max(w, 2) + 8} y={y + rowH / 2 + 4} fontSize="11.5" fill="#16233d" fontFamily="monospace" fontWeight="600">{d.v}</text>
+            <text x={padL + Math.max(w, 2) + 8} y={y + rowH / 2 + 4} fontSize="11.5" fill={TINTA} fontFamily="monospace" fontWeight="600">{d.v}</text>
           </g>
         );
       })}
@@ -75,14 +76,14 @@ export function Donut({ datos, etiqueta, centro }: { datos: Dato[]; etiqueta: st
           off += frac * C;
           return seg;
         })}
-        <text x={cx} y={cy - 2} textAnchor="middle" fontSize="30" fill="#16233d" fontFamily="monospace" fontWeight="600">{total}</text>
-        <text x={cx} y={cy + 18} textAnchor="middle" fontSize="11" fill="#8595ad" fontFamily="monospace">{centro ?? ''}</text>
+        <text x={cx} y={cy - 2} textAnchor="middle" fontSize="30" fill={TINTA} fontFamily="monospace" fontWeight="600">{total}</text>
+        <text x={cx} y={cy + 18} textAnchor="middle" fontSize="11" fill={EJE} fontFamily="monospace">{centro ?? ''}</text>
       </svg>
       <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {datos.map((d, i) => (
           <li key={d.k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
             <span style={{ width: 12, height: 12, borderRadius: 3, background: PALETA[i % PALETA.length], flex: 'none' }} />
-            <span style={{ color: '#5a6a86' }}>{d.k}</span>
+            <span style={{ color: '#64748b' }}>{d.k}</span>
             <b style={{ fontFamily: 'monospace' }}>{d.v}</b>
           </li>
         ))}
@@ -96,11 +97,11 @@ export function Gauge({ ocupadas, total, etiqueta }: { ocupadas: number; total: 
   const C = 2 * Math.PI * r, frac = total ? ocupadas / total : 0;
   return (
     <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={etiqueta} style={{ width: 210, maxWidth: '100%', height: 'auto', margin: '0 auto', display: 'block' }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#eef2f7" strokeWidth={sw} />
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1f8a5b" strokeWidth={sw} strokeLinecap="round"
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={PISTA} strokeWidth={sw} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#16a34a" strokeWidth={sw} strokeLinecap="round"
         strokeDasharray={`${frac * C} ${C}`} transform={`rotate(-90 ${cx} ${cy})`} />
-      <text x={cx} y={cy - 2} textAnchor="middle" fontSize="34" fill="#16233d" fontFamily="monospace" fontWeight="600">{Math.round(frac * 100)}%</text>
-      <text x={cx} y={cy + 20} textAnchor="middle" fontSize="11" fill="#8595ad" fontFamily="monospace">{ocupadas} de {total} plazas</text>
+      <text x={cx} y={cy - 2} textAnchor="middle" fontSize="34" fill={TINTA} fontFamily="monospace" fontWeight="600">{Math.round(frac * 100)}%</text>
+      <text x={cx} y={cy + 20} textAnchor="middle" fontSize="11" fill={EJE} fontFamily="monospace">{ocupadas} de {total} plazas</text>
     </svg>
   );
 }

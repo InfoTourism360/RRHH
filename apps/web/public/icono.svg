@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RRHH">
-  <rect width="512" height="512" rx="96" fill="#0b5cab"/>
-  <circle cx="256" cy="196" r="72" fill="#ffffff"/>
-  <path d="M128 396c0-70 57-116 128-116s128 46 128 116v20H128z" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gestión de Personal">
+  <rect width="512" height="512" rx="112" fill="#4f46e5"/>
+  <circle cx="256" cy="196" r="70" fill="#ffffff"/>
+  <path d="M132 400c0-68 56-112 124-112s124 44 124 112v16H132z" fill="#ffffff"/>
 </svg>

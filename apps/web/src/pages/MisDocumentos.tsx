@@ -48,7 +48,7 @@ export function MisDocumentos() {
                   </p>
                 </div>
                 <button onClick={() => bajar(d)}
-                        className="rounded bg-marca text-white font-semibold px-4 py-2 hover:bg-marca-oscuro">
+                        className="rounded bg-marca-600 text-white font-semibold px-4 py-2 hover:bg-marca-700">
                   Descargar <span className="sr-only">{d.titulo}</span>
                 </button>
               </li>

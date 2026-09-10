@@ -50,8 +50,29 @@ npm run dev -w @rrhh/web   # http://localhost:5173 (proxy /api -> :3001)
 ```
 
 Logins de demo tras el seed (CIF `P4600001A`):
-- Administrador: `admin@demo.es` / `Demo1234!`
+- Administrador: `admin@demo.es` / `Demo1234!` (cuadro de mando + back-office)
 - Empleado (portal): `empleado@demo.es` / `Demo1234!` (PIN de quiosco `1234`)
+
+## Despliegue "como en producción" (Docker)
+
+Todo compilado y servido por **nginx** en un único origen, con Postgres propio y
+migraciones + datos de demo aplicados automáticamente al arrancar:
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+Abre **http://localhost:8080** (mismos logins de demo). Para parar:
+
+```bash
+docker compose -f docker-compose.prod.yml down        # conserva datos
+docker compose -f docker-compose.prod.yml down -v      # borra también el volumen
+```
+
+Diferencias con el modo desarrollo: frontend *build* minificado (no Vite),
+API compilada a JS (no `tsx`), reverse proxy real con cabeceras de seguridad y
+un solo puerto expuesto. Los secretos del compose son de demostración: en un
+despliegue real van en un gestor de secretos y detrás de HTTPS.
 
 ## Copias de seguridad (ENS)
 

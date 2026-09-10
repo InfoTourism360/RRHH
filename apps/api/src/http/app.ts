@@ -22,6 +22,8 @@ const GESTION = ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'];
 
 export function crearApp() {
   const app = express();
+  // Detrás de un reverse proxy (nginx): usa X-Forwarded-* para obtener la IP real.
+  app.set('trust proxy', 1);
   // 8 MB para permitir la subida de documentos en base64 (p. ej. nóminas PDF).
   app.use(express.json({ limit: '8mb' }));
 

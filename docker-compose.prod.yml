@@ -1,0 +1,65 @@
+# Despliegue "como en producción": Postgres + API compilada + nginx (SPA + proxy).
+# Un solo origen expuesto: http://localhost:8080
+#
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# NOTA de seguridad: en un despliegue real, los secretos (APP_ENCRYPTION_KEY,
+# contraseñas) van en un gestor de secretos, no en el fichero. Aquí son de demo.
+
+x-secrets: &secrets
+  DATABASE_URL_OWNER: postgres://rrhh_owner:rrhh_owner_prod_pwd@db:5432/rrhh
+  DATABASE_URL_APP: postgres://rrhh_app:dev_app_pwd@db:5432/rrhh
+  APP_ENCRYPTION_KEY: "2rAM8ZdJkL8S8vbxcIuSXdIkMj0vkejT4tW05GOs+Og="
+  NODE_ENV: production
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rrhh_db_prod
+    environment:
+      POSTGRES_USER: rrhh_owner
+      POSTGRES_PASSWORD: rrhh_owner_prod_pwd
+      POSTGRES_DB: rrhh
+      TZ: Europe/Madrid
+      PGTZ: Europe/Madrid
+    volumes:
+      - rrhh_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rrhh_owner -d rrhh"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # Servicio de un solo uso: aplica migraciones y siembra datos de demo, y termina.
+  init:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment: *secrets
+    command: sh -c "node dist/db/migrate.js && node dist/seed/seed-ayuntamiento.js"
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    container_name: rrhh_api_prod
+    environment:
+      <<: *secrets
+      PORT: "3001"
+    depends_on:
+      db: { condition: service_healthy }
+      init: { condition: service_completed_successfully }
+    expose:
+      - "3001"
+    restart: unless-stopped
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    container_name: rrhh_web_prod
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  rrhh_pgdata_prod:

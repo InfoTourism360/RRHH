@@ -1,6 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { conTenant } from '../db/pool.js';
-import { fichar, corregirFichaje, listarFichajes, notificacionesDe } from '../domain/fichaje.js';
+import {
+  fichar, corregirFichaje, listarFichajes, notificacionesDe,
+  marcarNotificacionLeida, marcarTodasLeidas,
+} from '../domain/fichaje.js';
 import { totalizar } from '../domain/totalizacion.js';
 import { festivosEnRango } from '../domain/calendario.js';
 import { diasAusenciaAprobada } from '../domain/ausencias.js';
@@ -108,6 +111,18 @@ export function rutasHorario(): Router {
     const personaId = req.sesion!.personaId;
     if (!personaId) return res.json([]);
     res.json(await notificacionesDe(ctxDe(req), personaId));
+  }));
+
+  r.patch('/notificaciones/:id/leida', h(async (req, res) => {
+    const personaId = req.sesion!.personaId;
+    if (!personaId) return res.status(400).json({ error: 'Sin ficha de persona.' });
+    res.json(await marcarNotificacionLeida(ctxDe(req), String(req.params.id), personaId));
+  }));
+
+  r.post('/notificaciones/leer-todas', h(async (req, res) => {
+    const personaId = req.sesion!.personaId;
+    if (!personaId) return res.status(400).json({ error: 'Sin ficha de persona.' });
+    res.json(await marcarTodasLeidas(ctxDe(req), personaId));
   }));
 
   // Totalización (propia; terceros solo con rol de gestión/responsable/RLT).

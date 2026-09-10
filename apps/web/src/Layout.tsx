@@ -4,6 +4,7 @@ import { useAuth } from './auth';
 import {
   IcoPanel, IcoReloj, IcoAusencias, IcoCalendario, IcoDoc, IcoUsuario,
   IcoSalir, IcoMenu, IcoCerrar, IcoInicio, IcoPlantilla, IcoActividad, IcoAprobar,
+  IcoCampana, IcoAjustes,
 } from './icons';
 
 type Enlace = { a: string; txt: string; Ico: ComponentType<{ className?: string }> };
@@ -14,13 +15,16 @@ const NAV_EMPLEADO: Enlace[] = [
   { a: '/ausencias', txt: 'Mis ausencias', Ico: IcoAusencias },
   { a: '/calendario', txt: 'Mi calendario', Ico: IcoCalendario },
   { a: '/documentos', txt: 'Mis documentos', Ico: IcoDoc },
+  { a: '/avisos', txt: 'Mis avisos', Ico: IcoCampana },
   { a: '/datos', txt: 'Mis datos', Ico: IcoUsuario },
 ];
 const NAV_GESTION: Enlace[] = [
   { a: '/', txt: 'Cuadro de mando', Ico: IcoPanel },
   { a: '/plantilla', txt: 'Plantilla y RPT', Ico: IcoPlantilla },
+  { a: '/control-horario', txt: 'Control horario', Ico: IcoReloj },
   { a: '/aprobaciones', txt: 'Aprobaciones', Ico: IcoAprobar },
   { a: '/publicaciones', txt: 'Documentos', Ico: IcoDoc },
+  { a: '/configuracion', txt: 'Configuración', Ico: IcoAjustes },
   { a: '/actividad', txt: 'Actividad', Ico: IcoActividad },
   { a: '/inicio', txt: 'Mi espacio', Ico: IcoInicio },
 ];

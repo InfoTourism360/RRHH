@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { conTenant } from '../src/db/pool.js';
 import * as est from '../src/domain/estructura.js';
-import { fichar, corregirFichaje, listarFichajes, notificacionesDe } from '../src/domain/fichaje.js';
+import {
+  fichar, corregirFichaje, listarFichajes, notificacionesDe,
+  marcarNotificacionLeida, marcarTodasLeidas,
+} from '../src/domain/fichaje.js';
 import { totalizar, resolverEfectivos } from '../src/domain/totalizacion.js';
 import { crearEntidadDemo } from './helpers.js';
 
@@ -79,6 +82,33 @@ describe('Control horario', () => {
     // Se notifica a la persona.
     const notis = await notificacionesDe(ctx, p.id as string);
     expect(notis.some((n) => n.tipo === 'FICHAJE_CORREGIDO')).toBe(true);
+  });
+
+  it('el empleado puede marcar sus avisos como leídos', async () => {
+    const a = await crearEntidadDemo('FICH5');
+    const ctx = { entidadId: a.entidadId, usuarioId: a.adminUsuarioId };
+    const p = await personaEn(a.entidadId, '10000005Y');
+    const orig = await fichar(ctx, { personaId: p.id as string, tipo: 'ENTRADA', origen: 'WEB' });
+    await corregirFichaje(ctx, {
+      accion: 'ANULA', corrigeEventoId: orig.id as string, motivo: 'Fichaje duplicado',
+    });
+
+    let notis = await notificacionesDe(ctx, p.id as string);
+    const pendiente = notis.find((n) => !n.leida_en)!;
+    expect(pendiente).toBeTruthy();
+
+    // Otra persona no puede marcarlo como leído.
+    const otra = await personaEn(a.entidadId, '10000006F');
+    expect(await marcarNotificacionLeida(ctx, pendiente.id as string, otra.id as string)).toBeNull();
+
+    // El destinatario sí.
+    const leida = await marcarNotificacionLeida(ctx, pendiente.id as string, p.id as string);
+    expect(leida?.leida_en).toBeTruthy();
+
+    // Y "leer todas" no deja pendientes.
+    await marcarTodasLeidas(ctx, p.id as string);
+    notis = await notificacionesDe(ctx, p.id as string);
+    expect(notis.filter((n) => !n.leida_en)).toHaveLength(0);
   });
 
   it('el fichaje es append-only: no admite UPDATE/DELETE del rol de app', async () => {

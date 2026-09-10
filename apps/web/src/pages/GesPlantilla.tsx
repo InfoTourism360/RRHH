@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError } from '../api';
-import { Alerta, Boton, Campo, Selector, Tarjeta, Tabla, Modal, Etiqueta, type Columna } from '../ui';
+import {
+  Alerta, Boton, Campo, Selector, Tarjeta, Tabla, Modal, Etiqueta, Buscador, filtrar, type Columna,
+} from '../ui';
 import {
   GRUPOS, ESCALAS, TIPOS_RELACION, SITUACIONES, FORMAS_PROVISION, JORNADAS, TIPOS_DOCUMENTO_ID, etiqueta,
 } from '../catalogos';
@@ -58,8 +60,10 @@ function Aviso({ m }: { m: { tipo: 'exito' | 'error'; texto: string } | null }) 
 function SecPersonas() {
   const [filas, recargar] = useLista('/estructura/personas');
   const [abrir, setAbrir] = useState(false);
+  const [q, setQ] = useState('');
   const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
   const [f, setF] = useState({ tipoDocumento: 'DNI', numDocumento: '', nombre: '', apellido1: '', apellido2: '', emailCorp: '', telefono: '' });
+  const visibles = filtrar(filas, ['nombre', 'apellido1', 'apellido2', 'num_documento', 'email_corp'], q);
 
   async function crear(e: FormEvent) {
     e.preventDefault();
@@ -81,8 +85,9 @@ function SecPersonas() {
   return (
     <>
       <Aviso m={msg} />
-      <Cab titulo={`Personas (${filas.length})`} onNuevo={() => setAbrir(true)}>
-        <Tabla columnas={cols} filas={filas} />
+      <Cab titulo={`Personas (${visibles.length}${q ? ` de ${filas.length}` : ''})`} onNuevo={() => setAbrir(true)}>
+        <Buscador valor={q} onCambio={setQ} placeholder="Buscar por nombre, apellidos o documento…" />
+        <Tabla columnas={cols} filas={visibles} vacio="Ninguna persona coincide con la búsqueda." />
       </Cab>
       {abrir && (
         <Modal titulo="Nueva persona" onCerrar={() => setAbrir(false)}>
@@ -140,8 +145,10 @@ function SecUnidades() {
 function SecPlazas() {
   const [filas, recargar] = useLista('/estructura/plazas');
   const [abrir, setAbrir] = useState(false);
+  const [q, setQ] = useState('');
   const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
   const [f, setF] = useState({ codigo: '', denominacion: '', grupoCodigo: 'C1', escalaCodigo: 'GENERAL', dotacion: 1 });
+  const visibles = filtrar(filas, ['codigo', 'denominacion', 'grupo_codigo'], q);
   async function crear(e: FormEvent) {
     e.preventDefault();
     try {
@@ -158,8 +165,9 @@ function SecPlazas() {
   return (
     <>
       <Aviso m={msg} />
-      <Cab titulo={`Plazas (${filas.length})`} onNuevo={() => setAbrir(true)}>
-        <Tabla columnas={cols} filas={filas} />
+      <Cab titulo={`Plazas (${visibles.length}${q ? ` de ${filas.length}` : ''})`} onNuevo={() => setAbrir(true)}>
+        <Buscador valor={q} onCambio={setQ} placeholder="Buscar por código, denominación o grupo…" />
+        <Tabla columnas={cols} filas={visibles} vacio="Ninguna plaza coincide con la búsqueda." />
       </Cab>
       {abrir && (
         <Modal titulo="Nueva plaza" onCerrar={() => setAbrir(false)}>
@@ -190,8 +198,10 @@ function SecPuestos() {
   const [plazas] = useLista<Fila>('/estructura/plazas');
   const [unidades] = useLista<Fila>('/estructura/unidades');
   const [abrir, setAbrir] = useState(false);
+  const [q, setQ] = useState('');
   const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
   const [f, setF] = useState({ plazaId: '', unidadId: '', codigo: '', denominacion: '', nivelCd: 16, formaProvision: 'CONCURSO', tipoJornada: 'COMPLETA' });
+  const visibles = filtrar(filas, ['codigo', 'denominacion'], q);
   async function crear(e: FormEvent) {
     e.preventDefault();
     try {
@@ -207,8 +217,9 @@ function SecPuestos() {
   return (
     <>
       <Aviso m={msg} />
-      <Cab titulo={`Puestos de trabajo (${filas.length})`} onNuevo={() => setAbrir(true)}>
-        <Tabla columnas={cols} filas={filas} />
+      <Cab titulo={`Puestos de trabajo (${visibles.length}${q ? ` de ${filas.length}` : ''})`} onNuevo={() => setAbrir(true)}>
+        <Buscador valor={q} onCambio={setQ} placeholder="Buscar por código o denominación…" />
+        <Tabla columnas={cols} filas={visibles} vacio="Ningún puesto coincide con la búsqueda." />
       </Cab>
       {abrir && (
         <Modal titulo="Nuevo puesto (RPT)" onCerrar={() => setAbrir(false)}>

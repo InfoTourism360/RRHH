@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Cargando, Tarjeta } from '../ui';
+import { Cargando, Tarjeta, Etiqueta } from '../ui';
+import { TIPOS_RELACION, SITUACIONES, etiqueta } from '../catalogos';
 
 interface Datos {
   persona: {
@@ -13,51 +14,60 @@ interface Datos {
   } | null;
 }
 
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string | number | null }) {
+function Dato({ etiqueta: et, valor }: { etiqueta: string; valor: React.ReactNode }) {
   return (
-    <div className="py-2 border-b border-gray-100">
-      <dt className="text-sm text-gray-600">{etiqueta}</dt>
-      <dd className="font-medium">{valor ?? '—'}</dd>
+    <div className="py-2.5 border-b border-linea last:border-0 flex flex-wrap justify-between gap-2">
+      <dt className="text-sm text-apagado">{et}</dt>
+      <dd className="font-semibold text-sm text-right">{valor ?? '—'}</dd>
     </div>
   );
 }
 
 export function MisDatos() {
   const [d, setD] = useState<Datos | null>(null);
-  useEffect(() => { api.get<Datos>('/portal/mis-datos').then(setD).catch(() => setD({ persona: null, puesto: null })); }, []);
+  useEffect(() => {
+    api.get<Datos>('/portal/mis-datos').then(setD).catch(() => setD({ persona: null, puesto: null }));
+  }, []);
   if (!d) return <Cargando />;
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Mis datos</h1>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <h1 className="text-[26px] font-extrabold mb-1">Mis datos</h1>
+      <p className="text-apagado mb-6">Consulta de tu ficha y tu situación administrativa.</p>
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <Tarjeta titulo="Datos personales">
           {d.persona ? (
             <dl>
               <Dato etiqueta="Nombre" valor={[d.persona.nombre, d.persona.apellido1, d.persona.apellido2].filter(Boolean).join(' ')} />
-              <Dato etiqueta="Documento" valor={`${d.persona.tipo_documento} ${d.persona.num_documento}`} />
+              <Dato etiqueta="Documento" valor={<span className="num">{d.persona.tipo_documento} {d.persona.num_documento}</span>} />
               <Dato etiqueta="Correo corporativo" valor={d.persona.email_corp} />
               <Dato etiqueta="Teléfono" valor={d.persona.telefono} />
             </dl>
-          ) : <p className="text-gray-600">Sin ficha de personal.</p>}
+          ) : <p className="text-apagado">Sin ficha de personal.</p>}
         </Tarjeta>
 
         <Tarjeta titulo="Puesto y situación">
           {d.puesto ? (
             <dl>
               <Dato etiqueta="Puesto" valor={d.puesto.puesto} />
-              <Dato etiqueta="Unidad" valor={d.puesto.unidad} />
-              <Dato etiqueta="Nivel (CD)" valor={d.puesto.nivel_cd} />
-              <Dato etiqueta="Relación" valor={d.puesto.tipo_codigo} />
-              <Dato etiqueta="Situación administrativa" valor={d.puesto.situacion_codigo} />
-              <Dato etiqueta="Toma de posesión" valor={d.puesto.toma_posesion} />
+              <Dato etiqueta="Unidad orgánica" valor={d.puesto.unidad} />
+              <Dato etiqueta="Nivel de complemento de destino" valor={<span className="num">{d.puesto.nivel_cd}</span>} />
+              <Dato etiqueta="Vínculo" valor={etiqueta(TIPOS_RELACION, d.puesto.tipo_codigo)} />
+              <Dato etiqueta="Situación administrativa"
+                    valor={<Etiqueta tono={d.puesto.situacion_codigo === 'SERV_ACTIVO' ? 'exito' : 'aviso'}>
+                      {etiqueta(SITUACIONES, d.puesto.situacion_codigo)}
+                    </Etiqueta>} />
+              <Dato etiqueta="Toma de posesión" valor={<span className="num">{d.puesto.toma_posesion}</span>} />
             </dl>
-          ) : <p className="text-gray-600">Sin relación de servicio vigente.</p>}
-          <p className="mt-3 text-sm text-gray-600">
-            Para modificar tus datos, contacta con Recursos Humanos.
-          </p>
+          ) : <p className="text-apagado">Sin relación de servicio vigente.</p>}
         </Tarjeta>
       </div>
+
+      <p className="mt-4 text-sm text-apagado">
+        Estos datos son de solo lectura. Para modificarlos, dirígete a Recursos Humanos: cualquier
+        cambio queda registrado en el histórico de la entidad.
+      </p>
     </div>
   );
 }

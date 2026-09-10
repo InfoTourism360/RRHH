@@ -109,7 +109,11 @@ export const correccionSchema = z
 
 export const pinSchema = z.object({ pin: z.string().regex(/^\d{4,8}$/) }).strict();
 
-export const rangoSchema = z.object({ desde: fecha, hasta: fecha }).strict();
+// `personaId` es opcional: solo lo usan los roles autorizados para consultar a
+// terceros (el control de acceso se aplica en la ruta, no aquí).
+export const rangoSchema = z
+  .object({ desde: fecha, hasta: fecha, personaId: z.string().uuid().optional() })
+  .strict();
 
 // --------------------------------- AUSENCIAS --------------------------------
 export const solicitudSchema = z

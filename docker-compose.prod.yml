@@ -6,6 +6,10 @@
 # NOTA de seguridad: en un despliegue real, los secretos (APP_ENCRYPTION_KEY,
 # contraseñas) van en un gestor de secretos, no en el fichero. Aquí son de demo.
 
+# Proyecto propio para que NO colisione con el entorno de desarrollo
+# (docker-compose.yml), que usa el mismo nombre de servicio `db`.
+name: rrhh-prod
+
 x-secrets: &secrets
   DATABASE_URL_OWNER: postgres://rrhh_owner:rrhh_owner_prod_pwd@db:5432/rrhh
   DATABASE_URL_APP: postgres://rrhh_app:dev_app_pwd@db:5432/rrhh

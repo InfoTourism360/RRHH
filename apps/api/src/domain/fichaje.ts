@@ -118,3 +118,26 @@ export function notificacionesDe(ctx: Contexto, personaId: string) {
     return r.rows;
   });
 }
+
+/** Marca un aviso como leído. Solo el destinatario puede hacerlo. */
+export function marcarNotificacionLeida(ctx: Contexto, id: string, personaId: string) {
+  return conTenant(ctx, async (ej) => {
+    const r = await ej.query(
+      `UPDATE notificacion SET leida_en = now()
+        WHERE id = $1 AND persona_id = $2 AND leida_en IS NULL RETURNING *`,
+      [id, personaId],
+    );
+    return r.rows[0] ?? null;
+  });
+}
+
+/** Marca todos los avisos pendientes de la persona como leídos. */
+export function marcarTodasLeidas(ctx: Contexto, personaId: string) {
+  return conTenant(ctx, async (ej) => {
+    const r = await ej.query(
+      `UPDATE notificacion SET leida_en = now() WHERE persona_id = $1 AND leida_en IS NULL`,
+      [personaId],
+    );
+    return { marcadas: r.rowCount ?? 0 };
+  });
+}

@@ -8,6 +8,9 @@ import { GesPlantilla } from './pages/GesPlantilla';
 import { GesAusencias } from './pages/GesAusencias';
 import { GesDocumentos } from './pages/GesDocumentos';
 import { GesActividad } from './pages/GesActividad';
+import { GesHorario } from './pages/GesHorario';
+import { GesConfiguracion } from './pages/GesConfiguracion';
+import { Avisos } from './pages/Avisos';
 import { Inicio } from './pages/Inicio';
 import { MisFichajes } from './pages/MisFichajes';
 import { MisAusencias } from './pages/MisAusencias';
@@ -40,10 +43,13 @@ export function App() {
         <Route path="/" element={esGestion ? <Panel /> : <Inicio />} />
         <Route path="/panel" element={<Panel />} />
         {esGestion && <Route path="/plantilla" element={<GesPlantilla />} />}
+        {esGestion && <Route path="/control-horario" element={<GesHorario />} />}
         {esGestion && <Route path="/aprobaciones" element={<GesAusencias />} />}
         {esGestion && <Route path="/publicaciones" element={<GesDocumentos />} />}
+        {esGestion && <Route path="/configuracion" element={<GesConfiguracion />} />}
         {esGestion && <Route path="/actividad" element={<GesActividad />} />}
         <Route path="/inicio" element={<Inicio />} />
+        <Route path="/avisos" element={<Avisos />} />
         <Route path="/fichajes" element={<MisFichajes />} />
         <Route path="/ausencias" element={<MisAusencias />} />
         <Route path="/calendario" element={<MiCalendario />} />

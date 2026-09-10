@@ -101,6 +101,30 @@ export function Cargando({ texto = 'Cargando…' }: { texto?: string }) {
   );
 }
 
+/** Campo de búsqueda para filtrar tablas largas. */
+export function Buscador({ valor, onCambio, etiqueta = 'Buscar', placeholder = 'Buscar…' }:
+{ valor: string; onCambio: (v: string) => void; etiqueta?: string; placeholder?: string }) {
+  const id = useId();
+  return (
+    <div className="mb-4">
+      <label htmlFor={id} className="sr-only">{etiqueta}</label>
+      <input id={id} type="search" value={valor} placeholder={placeholder}
+             onChange={(e) => onCambio(e.target.value)}
+             className="w-full sm:max-w-xs rounded-lg border border-linea bg-white px-3.5 py-2.5 text-sm
+                        focus:border-marca-500 focus:ring-4 focus:ring-marca-500/15 outline-none" />
+    </div>
+  );
+}
+
+/** Filtra filas por coincidencia de texto en los campos indicados. */
+export function filtrar<T extends object>(filas: T[], campos: string[], q: string): T[] {
+  const t = q.trim().toLowerCase();
+  if (!t) return filas;
+  return filas.filter((f) =>
+    campos.some((c) => String((f as Record<string, unknown>)[c] ?? '').toLowerCase().includes(t)),
+  );
+}
+
 export function Modal({ titulo, children, onCerrar }: { titulo: string; children: ReactNode; onCerrar: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const id = useId();

@@ -53,6 +53,19 @@ Logins de demo tras el seed (CIF `P4600001A`):
 - Administrador: `admin@demo.es` / `Demo1234!` (cuadro de mando + back-office)
 - Empleado (portal): `empleado@demo.es` / `Demo1234!` (PIN de quiosco `1234`)
 
+## Qué puede hacer cada rol
+
+**Empleado** — fichar (widget con estado dentro/fuera/pausa), consultar su jornada con
+totalización y **descargar su informe en PDF/CSV**, solicitar vacaciones y permisos, ver sus
+saldos, su calendario laboral, sus documentos (con acuse) y sus **avisos** (correcciones de
+fichaje y resoluciones).
+
+**Gestor / Administrador** — cuadro de mando con KPIs y gráficas; plantilla y RPT (personas,
+unidades, plazas, puestos y ocupación, con búsqueda); **control horario** por empleado con
+**correcciones trazadas** e informes; aprobación de ausencias con denegación motivada;
+publicación de documentos y acuses; **configuración del motor de reglas** de ausencias,
+calendario laboral y saldos; y el registro de actividad (ENS).
+
 ## Despliegue "como en producción" (Docker)
 
 Todo compilado y servido por **nginx** en un único origen, con Postgres propio y

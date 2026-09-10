@@ -1,98 +1,123 @@
 import { useEffect, useState, useCallback } from 'react';
-import { api, ApiError } from '../api';
-import { Alerta, Boton, Cargando, Tarjeta } from '../ui';
+import { api, descargar } from '../api';
+import { Boton, Cargando, Etiqueta, Tarjeta, Tabla, minAHoras, type Columna } from '../ui';
+import { FicharWidget, ETIQUETA_FICHAJE } from '../FicharWidget';
 
 interface Evento {
   id: string; tipo: string; origen: string;
   momento_servidor: string; momento_cliente: string | null;
   accion_correccion: string | null; motivo: string | null;
 }
+interface Dia { fecha: string; trabajadoMin: number; teoricoMin: number; saldoMin: number; esFestivo: boolean; esAusencia: boolean; extrasMin: number }
+interface Total { dias: Dia[]; totales: { trabajadoMin: number; teoricoMin: number; saldoMin: number; extrasMin: number } }
 
-const ETIQUETA: Record<string, string> = {
-  ENTRADA: 'Entrada', SALIDA: 'Salida', INICIO_PAUSA: 'Inicio de pausa', FIN_PAUSA: 'Fin de pausa',
-};
-
-function mesActual() {
+function mesPorDefecto() {
   const d = new Date();
-  const primero = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-  const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  return { primero, hoy };
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function rangoDeMes(mes: string) {
+  const [a, m] = mes.split('-').map(Number);
+  const desde = `${mes}-01`;
+  const ultimo = new Date(a!, m!, 0).getDate();
+  return { desde, hasta: `${mes}-${String(ultimo).padStart(2, '0')}` };
 }
 
 export function MisFichajes() {
+  const [mes, setMes] = useState(mesPorDefecto());
   const [eventos, setEventos] = useState<Evento[] | null>(null);
-  const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
-  const { primero, hoy } = mesActual();
+  const [total, setTotal] = useState<Total | null>(null);
+  const { desde, hasta } = rangoDeMes(mes);
 
   const cargar = useCallback(async () => {
-    try {
-      setEventos(await api.get<Evento[]>(`/horario/fichajes?desde=${primero}&hasta=${hoy}`));
-    } catch { setEventos([]); }
-  }, [primero, hoy]);
-
+    setEventos(null);
+    try { setEventos(await api.get<Evento[]>(`/horario/fichajes?desde=${desde}&hasta=${hasta}`)); } catch { setEventos([]); }
+    try { setTotal(await api.get<Total>(`/horario/totalizacion?desde=${desde}&hasta=${hasta}`)); } catch { setTotal(null); }
+  }, [desde, hasta]);
   useEffect(() => { void cargar(); }, [cargar]);
 
-  async function fichar(tipo: string) {
-    setMsg(null);
-    try {
-      await api.post('/horario/fichar', { tipo, origen: 'WEB' });
-      setMsg({ tipo: 'exito', texto: `${ETIQUETA[tipo]} registrada correctamente.` });
-      await cargar();
-    } catch (err) {
-      setMsg({ tipo: 'error', texto: err instanceof ApiError ? err.message : 'No se pudo fichar.' });
-    }
-  }
+  const colsEventos: Columna<Evento>[] = [
+    {
+      k: 'momento', txt: 'Momento',
+      render: (e) => new Date(e.momento_cliente ?? e.momento_servidor).toLocaleString('es-ES'),
+    },
+    { k: 'tipo', txt: 'Tipo', render: (e) => ETIQUETA_FICHAJE[e.tipo] ?? e.tipo },
+    {
+      k: 'origen', txt: 'Origen',
+      render: (e) => e.origen === 'CORRECCION'
+        ? <Etiqueta tono="aviso">Corrección · {e.accion_correccion}</Etiqueta>
+        : <Etiqueta>{e.origen}</Etiqueta>,
+    },
+    { k: 'motivo', txt: 'Motivo', render: (e) => e.motivo ?? '' },
+  ];
+
+  const colsDias: Columna<Dia>[] = [
+    { k: 'fecha', txt: 'Fecha' },
+    { k: 'trabajadoMin', txt: 'Trabajado', alinear: 'der', render: (d) => minAHoras(d.trabajadoMin) },
+    { k: 'teoricoMin', txt: 'Teórico', alinear: 'der', render: (d) => minAHoras(d.teoricoMin) },
+    {
+      k: 'saldoMin', txt: 'Saldo', alinear: 'der',
+      render: (d) => <span className={d.saldoMin < 0 ? 'text-error' : d.saldoMin > 0 ? 'text-exito' : ''}>{minAHoras(d.saldoMin)}</span>,
+    },
+    {
+      k: 'marca', txt: 'Observaciones',
+      render: (d) => d.esAusencia ? <Etiqueta tono="marca">Ausencia</Etiqueta>
+        : d.esFestivo ? <Etiqueta tono="aviso">Festivo</Etiqueta>
+        : d.extrasMin > 0 ? <Etiqueta tono="exito">+{minAHoras(d.extrasMin)} extra</Etiqueta> : '',
+    },
+  ];
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Mis fichajes</h1>
-
-      {msg && <div className="mb-4"><Alerta tipo={msg.tipo}>{msg.texto}</Alerta></div>}
+      <h1 className="text-[26px] font-extrabold mb-1">Mis fichajes</h1>
+      <p className="text-apagado mb-6">Registra tu jornada y consulta tu histórico.</p>
 
       <div className="mb-6">
-        <Tarjeta titulo="Registrar jornada">
-          <div className="flex flex-wrap gap-3" role="group" aria-label="Acciones de fichaje">
-            <Boton onClick={() => fichar('ENTRADA')}>Entrada</Boton>
-            <Boton onClick={() => fichar('SALIDA')} variante="secundario">Salida</Boton>
-            <Boton onClick={() => fichar('INICIO_PAUSA')} variante="secundario">Inicio de pausa</Boton>
-            <Boton onClick={() => fichar('FIN_PAUSA')} variante="secundario">Fin de pausa</Boton>
-          </div>
-        </Tarjeta>
+        <Tarjeta titulo="Registrar jornada"><FicharWidget onFichado={cargar} /></Tarjeta>
       </div>
 
-      <Tarjeta titulo="Movimientos de este mes">
-        {!eventos ? <Cargando /> : eventos.length === 0 ? (
-          <p className="text-gray-600">Aún no tienes fichajes este mes.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <caption className="sr-only">Listado de fichajes del mes en curso, incluidas las correcciones</caption>
-              <thead>
-                <tr className="border-b-2 border-gray-300">
-                  <th scope="col" className="py-2 pr-4">Momento</th>
-                  <th scope="col" className="py-2 pr-4">Tipo</th>
-                  <th scope="col" className="py-2 pr-4">Origen</th>
-                  <th scope="col" className="py-2">Observaciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {eventos.map((e) => {
-                  const esCorr = e.origen === 'CORRECCION';
-                  const cuando = new Date(e.momento_cliente ?? e.momento_servidor);
-                  return (
-                    <tr key={e.id} className={`border-b border-gray-200 ${esCorr ? 'bg-amber-50' : ''}`}>
-                      <td className="py-2 pr-4">{cuando.toLocaleString('es-ES')}</td>
-                      <td className="py-2 pr-4">{ETIQUETA[e.tipo] ?? e.tipo}</td>
-                      <td className="py-2 pr-4">{esCorr ? `Corrección (${e.accion_correccion})` : e.origen}</td>
-                      <td className="py-2">{e.motivo ?? ''}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Tarjeta>
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div>
+          <label htmlFor="mes" className="block text-sm font-semibold mb-1.5">Periodo</label>
+          <input id="mes" type="month" value={mes} onChange={(e) => setMes(e.target.value)}
+                 className="rounded-lg border border-linea bg-white px-3.5 py-2.5 focus:border-marca-500 focus:ring-4 focus:ring-marca-500/15 outline-none" />
+        </div>
+        <div className="flex gap-2">
+          <Boton variante="secundario" onClick={() => descargar(`/horario/informe.pdf?desde=${desde}&hasta=${hasta}`, `jornada_${mes}.pdf`)}>
+            Informe PDF
+          </Boton>
+          <Boton variante="secundario" onClick={() => descargar(`/horario/informe.csv?desde=${desde}&hasta=${hasta}`, `jornada_${mes}.csv`)}>
+            CSV
+          </Boton>
+        </div>
+      </div>
+
+      {total && (
+        <section aria-label="Resumen del periodo" className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-6">
+          {[
+            ['Trabajado', minAHoras(total.totales.trabajadoMin)],
+            ['Jornada teórica', minAHoras(total.totales.teoricoMin)],
+            ['Saldo', minAHoras(total.totales.saldoMin)],
+            ['Horas extra', minAHoras(total.totales.extrasMin)],
+          ].map(([t, v]) => (
+            <div key={t} className="bg-white rounded-xl2 border border-linea shadow-tarjeta p-4">
+              <div className="text-xs font-semibold text-apagado uppercase tracking-wide">{t}</div>
+              <div className="num text-2xl font-bold mt-2">{v}</div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      <div className="grid gap-4">
+        <Tarjeta titulo="Resumen por día">
+          {!total ? <Cargando /> : <Tabla columnas={colsDias} filas={total.dias} vacio="Sin jornada registrada en el periodo." />}
+        </Tarjeta>
+
+        <Tarjeta titulo="Movimientos registrados">
+          {!eventos ? <Cargando /> : (
+            <Tabla columnas={colsEventos} filas={eventos} vacio="Aún no tienes fichajes en este periodo." />
+          )}
+        </Tarjeta>
+      </div>
     </div>
   );
 }

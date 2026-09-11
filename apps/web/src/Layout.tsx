@@ -4,7 +4,7 @@ import { useAuth } from './auth';
 import {
   IcoPanel, IcoReloj, IcoAusencias, IcoCalendario, IcoDoc, IcoUsuario,
   IcoSalir, IcoMenu, IcoCerrar, IcoInicio, IcoPlantilla, IcoActividad, IcoAprobar,
-  IcoCampana, IcoAjustes,
+  IcoCampana, IcoAjustes, IcoLlave,
 } from './icons';
 
 type Enlace = { a: string; txt: string; Ico: ComponentType<{ className?: string }> };
@@ -24,6 +24,7 @@ const NAV_GESTION: Enlace[] = [
   { a: '/control-horario', txt: 'Control horario', Ico: IcoReloj },
   { a: '/aprobaciones', txt: 'Aprobaciones', Ico: IcoAprobar },
   { a: '/publicaciones', txt: 'Documentos', Ico: IcoDoc },
+  { a: '/accesos', txt: 'Accesos', Ico: IcoLlave },
   { a: '/configuracion', txt: 'Configuración', Ico: IcoAjustes },
   { a: '/actividad', txt: 'Actividad', Ico: IcoActividad },
   { a: '/inicio', txt: 'Mi espacio', Ico: IcoInicio },
@@ -35,7 +36,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const mainRef = useRef<HTMLElement>(null);
   const [abierto, setAbierto] = useState(false);
   const esGestion = !!yo?.roles.some((r) => ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'].includes(r.rol));
-  const nav = esGestion ? NAV_GESTION : NAV_EMPLEADO;
+  const esAdmin = !!yo?.roles.some((r) => r.rol === 'ADMIN_ENTIDAD');
+  // "Accesos" solo lo ve el administrador: repartir credenciales no es del gestor.
+  const nav = esGestion
+    ? (esAdmin ? NAV_GESTION : NAV_GESTION.filter((e) => e.a !== '/accesos'))
+    : NAV_EMPLEADO;
   const rolTxt = esGestion ? 'Gestión de personal' : 'Empleado';
 
   useEffect(() => { mainRef.current?.focus(); setAbierto(false); }, [loc.pathname]);

@@ -167,3 +167,23 @@ export const asignarSaldoSchema = z
     dias: z.number().min(0).max(366),
   })
   .strict();
+
+// ------------------------------ ACCESOS / USUARIOS --------------------------
+// Política de contraseñas documentada: mínimo 12 caracteres.
+const passwordSchema = z.string().min(12, 'La contraseña debe tener al menos 12 caracteres').max(200);
+const rolSchema = z.enum(['ADMIN_ENTIDAD', 'GESTOR_PERSONAL', 'RESPONSABLE_UNIDAD', 'EMPLEADO', 'RLT']);
+
+export const usuarioSchema = z
+  .object({
+    email: z.string().email(),
+    password: passwordSchema,
+    personaId: z.string().uuid().nullable().optional(),
+    roles: z.array(rolSchema).min(1, 'Asigna al menos un rol'),
+  })
+  .strict();
+
+export const rolesSchema = z.object({ roles: z.array(rolSchema) }).strict();
+export const passwordResetSchema = z.object({ password: passwordSchema }).strict();
+export const estadoUsuarioSchema = z
+  .object({ activo: z.boolean(), motivo: z.string().min(3).max(500) })
+  .strict();

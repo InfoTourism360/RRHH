@@ -49,6 +49,9 @@ npm run dev:api   # http://localhost:3001/salud
 npm run dev -w @rrhh/web   # http://localhost:5173 (proxy /api -> :3001)
 ```
 
+**Modo quiosco** (terminal compartido, sin sesión): `/quiosco`. Se identifica con correo y
+PIN — nunca con biometría. El PIN lo asigna el administrador desde *Accesos*.
+
 Logins de demo tras el seed (CIF `P4600001A`):
 - Administrador: `admin@demo.es` / `Demo1234!` (cuadro de mando + back-office)
 - Empleado (portal): `empleado@demo.es` / `Demo1234!` (PIN de quiosco `1234`)
@@ -63,7 +66,8 @@ fichaje y resoluciones).
 **Gestor / Administrador** — cuadro de mando con KPIs y gráficas; plantilla y RPT (personas,
 unidades, plazas, puestos y ocupación, con búsqueda); **control horario** por empleado con
 **correcciones trazadas** e informes; aprobación de ausencias con denegación motivada;
-publicación de documentos y acuses; **configuración del motor de reglas** de ausencias,
+**alta de usuarios y reparto de roles** (solo administrador); publicación de documentos
+y acuses; **configuración del motor de reglas** de ausencias,
 calendario laboral y saldos; y el registro de actividad (ENS).
 
 ## Despliegue "como en producción" (Docker)
@@ -72,20 +76,30 @@ Todo compilado y servido por **nginx** en un único origen, con Postgres propio 
 migraciones + datos de demo aplicados automáticamente al arrancar:
 
 ```bash
-docker compose -f docker-compose.prod.yml up --build -d
+# 1) Genera secretos en .env.prod (y, con --tls, certificados autofirmados)
+scripts/preparar-produccion.sh          # o: scripts/preparar-produccion.sh --tls
+
+# 2) Levanta el stack
+docker compose --env-file .env.prod -f docker-compose.prod.yml up --build -d
 ```
 
 Abre **http://localhost:8080** (mismos logins de demo). Para parar:
 
 ```bash
-docker compose -f docker-compose.prod.yml down        # conserva datos
-docker compose -f docker-compose.prod.yml down -v      # borra también el volumen
+docker compose --env-file .env.prod -f docker-compose.prod.yml down      # conserva datos
+docker compose --env-file .env.prod -f docker-compose.prod.yml down -v   # borra el volumen
 ```
 
 Diferencias con el modo desarrollo: frontend *build* minificado (no Vite),
-API compilada a JS (no `tsx`), reverse proxy real con cabeceras de seguridad y
-un solo puerto expuesto. Los secretos del compose son de demostración: en un
-despliegue real van en un gestor de secretos y detrás de HTTPS.
+API compilada a JS (no `tsx`) y reverse proxy real con cabeceras de seguridad.
+
+**Secretos**: viven en `.env.prod` (fuera del control de versiones, plantilla en
+`.env.prod.example`). El runner de migraciones sincroniza la contraseña del rol
+de aplicación con la del despliegue, así que no hay credenciales en el SQL.
+
+**HTTPS**: `scripts/preparar-produccion.sh --tls` genera certificados autofirmados
+y activa `nginx-https.conf` (redirección 80→443 y HSTS). En producción real se
+sustituyen por los certificados del dominio.
 
 ## Copias de seguridad (ENS)
 

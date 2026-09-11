@@ -1,0 +1,253 @@
+<meta charset="utf-8" />
+<title>Posición Competitiva RRHH</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+
+<style>
+  :root {
+    --ground:#f4f6fa; --surface:#ffffff; --surface-2:#eef1f7;
+    --ink:#141b2d; --muted:#4f5a70; --faint:#5c6880;
+    --line:#dde3ec; --line-2:#c7d0de;
+    --accent:#4338ca; --accent-soft:#eef0ff;
+    --si:#15803d; --si-bg:#e8f5ec;
+    --parcial:#a15c07; --parcial-bg:#fdf3e3;
+    --no:#b3261e; --no-bg:#fdecea;
+    --radio:14px;
+    --sombra:0 1px 2px rgba(20,27,45,.05), 0 10px 30px -18px rgba(20,27,45,.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0d1220; --surface:#151c2c; --surface-2:#1c2438;
+      --ink:#e9edf6; --muted:#a7b3c9; --faint:#8f9cb4;
+      --line:#28324a; --line-2:#3a4762;
+      --accent:#8b93ff; --accent-soft:#1e2440;
+      --si:#5ad18f; --si-bg:#12301f;
+      --parcial:#e5b567; --parcial-bg:#33260f;
+      --no:#f0776c; --no-bg:#3a1a17;
+      --sombra:0 1px 2px rgba(0,0,0,.4), 0 12px 34px -18px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0d1220; --surface:#151c2c; --surface-2:#1c2438;
+    --ink:#e9edf6; --muted:#a7b3c9; --faint:#8f9cb4;
+    --line:#28324a; --line-2:#3a4762;
+    --accent:#8b93ff; --accent-soft:#1e2440;
+    --si:#5ad18f; --si-bg:#12301f;
+    --parcial:#e5b567; --parcial-bg:#33260f;
+    --no:#f0776c; --no-bg:#3a1a17;
+    --sombra:0 1px 2px rgba(0,0,0,.4), 0 12px 34px -18px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);
+       font-family:"Plus Jakarta Sans",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .env{max-width:1060px;margin:0 auto;padding:32px 22px 60px}
+
+  header.cab{border-bottom:3px solid var(--ink);padding-bottom:22px;margin-bottom:30px}
+  .sello{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+         color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  h1{font-family:"Source Serif 4",Georgia,serif;font-weight:700;font-size:clamp(27px,4.4vw,40px);
+     margin:0;letter-spacing:-.015em;line-height:1.12;text-wrap:balance}
+  .bajada{color:var(--muted);font-size:16px;margin-top:10px;max-width:62ch}
+  .meta{margin-top:14px;font-size:13px;color:var(--faint)}
+
+  h2{font-family:"Source Serif 4",Georgia,serif;font-weight:700;font-size:23px;margin:42px 0 6px;letter-spacing:-.01em}
+  h2 .n{color:var(--accent);font-size:15px;font-family:"Plus Jakarta Sans",sans-serif;font-weight:800;
+        margin-right:9px;vertical-align:3px}
+  .sub{color:var(--muted);margin:0 0 18px;max-width:68ch}
+
+  .veredicto{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--si);
+             border-radius:var(--radio);padding:20px 22px;box-shadow:var(--sombra)}
+  .veredicto .ok{color:var(--si);font-weight:700}
+
+  .rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin-top:16px}
+  .ficha{background:var(--surface);border:1px solid var(--line);border-radius:var(--radio);padding:16px 17px}
+  .ficha h3{margin:0 0 5px;font-size:14.5px}
+  .ficha p{margin:0;font-size:13.5px;color:var(--muted)}
+
+  .tablaEnv{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radio);background:var(--surface);
+            box-shadow:var(--sombra)}
+  table{border-collapse:collapse;width:100%;min-width:680px;font-size:14px}
+  th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line)}
+  thead th{background:var(--surface-2);font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;
+           color:var(--faint);font-weight:700;white-space:nowrap}
+  thead th.nos{color:var(--accent)}
+  tbody tr:last-child td{border-bottom:none}
+  td.func{font-weight:600}
+  td.cel{text-align:center;white-space:nowrap}
+  col.nos{background:var(--accent-soft)}
+
+  .marca{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
+         padding:3px 9px;border-radius:999px}
+  .m-si{color:var(--si);background:var(--si-bg)}
+  .m-par{color:var(--parcial);background:var(--parcial-bg)}
+  .m-no{color:var(--no);background:var(--no-bg)}
+
+  .leyenda{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:12px;font-size:13px;color:var(--muted)}
+
+  ol.bloq{list-style:none;counter-reset:b;padding:0;margin:16px 0 0;display:grid;gap:12px}
+  ol.bloq li{counter-increment:b;background:var(--surface);border:1px solid var(--line);
+             border-radius:var(--radio);padding:16px 18px 16px 56px;position:relative}
+  ol.bloq li::before{content:counter(b);position:absolute;left:17px;top:15px;width:25px;height:25px;
+                     background:var(--accent);color:#fff;border-radius:50%;display:grid;place-items:center;
+                     font-size:13px;font-weight:800}
+  ol.bloq h3{margin:0 0 4px;font-size:15px}
+  ol.bloq p{margin:0;color:var(--muted);font-size:13.5px}
+
+  .cita{background:var(--surface-2);border-left:4px solid var(--accent);border-radius:0 10px 10px 0;
+        padding:15px 18px;margin:18px 0;font-size:14.5px;color:var(--muted)}
+  .cita b{color:var(--ink)}
+
+  .oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  footer{margin-top:46px;padding-top:16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="env">
+  <header class="cab">
+    <span class="sello">Análisis interno · producto</span>
+    <h1>Qué tenemos frente a las plataformas ya implantadas</h1>
+    <p class="bajada">
+      Contraste de nuestra plataforma de RRHH para entidades locales con las cuatro soluciones
+      señaladas por José Simó, y con el producto base que él propone.
+    </p>
+    <p class="meta">Elaborado a partir del código de la plataforma y de la información pública de cada proveedor.</p>
+  </header>
+
+  <h2><span class="n">01</span>Veredicto</h2>
+  <div class="veredicto">
+    <p style="margin:0 0 10px">
+      El <b>producto base</b> que plantea José —control horario, vacaciones y permisos, portal del
+      empleado y estructura organizativa— está <span class="ok">cubierto al completo</span>, y con la
+      misma secuencia que él propone: la nómina queda fuera, para una fase posterior.
+    </p>
+    <p style="margin:0;color:var(--muted);font-size:14px">
+      Lo que falta no son módulos, sino tres piezas de <b>entregabilidad</b> para poder instalar y
+      facturar en un ayuntamiento real (sección 05).
+    </p>
+  </div>
+
+  <div class="rejilla">
+    <div class="ficha"><h3>Control horario</h3><p>Fichaje web, móvil y quiosco. Registro inmutable, correcciones trazadas, informes PDF y CSV con hash.</p></div>
+    <div class="ficha"><h3>Vacaciones y permisos</h3><p>Motor de reglas configurable, catálogo TREBEP, calendario laboral y flujo de aprobación.</p></div>
+    <div class="ficha"><h3>Portal del empleado</h3><p>Aplicación instalable: fichar, ausencias, calendario, documentos con acuse, avisos y datos personales.</p></div>
+    <div class="ficha"><h3>Estructura organizativa</h3><p>Plaza, puesto y ocupante con vigencias, situaciones administrativas e histórico auditado.</p></div>
+  </div>
+
+  <h2><span class="n">02</span>Hallazgo: esPublico no compite con el producto base</h2>
+  <p class="sub">
+    Su oferta de RRHH no es una plataforma transaccional: vende expedientes, bases de selección,
+    jurisprudencia, aula virtual y resolución de consultas. Es <b>contenido y asesoría jurídica</b>.
+    No hay fichaje ni portal del empleado.
+  </p>
+  <div class="cita">
+    Consecuencia práctica: los competidores reales del producto base son <b>Savia</b> y
+    <b>Epsilon RH</b>. Con esPublico la relación natural sería de <b>complemento</b>, no de rivalidad.
+    Factorial, por su parte, es un SaaS generalista sin modelo de administración pública.
+  </div>
+
+  <h2><span class="n">03</span>Matriz de cobertura</h2>
+  <p class="sub">Comparación funcional módulo a módulo.</p>
+  <div class="tablaEnv">
+    <table>
+      <caption class="oculto">
+        Cobertura funcional comparada entre nuestra plataforma, Savia, Epsilon RH, Factorial y esPublico
+      </caption>
+      <colgroup><col /><col class="nos" /><col /><col /><col /><col /></colgroup>
+      <thead>
+        <tr>
+          <th scope="col">Funcionalidad</th>
+          <th scope="col" class="nos">Nosotros</th>
+          <th scope="col">Savia</th>
+          <th scope="col">Epsilon RH</th>
+          <th scope="col">Factorial</th>
+          <th scope="col">esPublico</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="func">RPT, plazas y plantilla presupuestaria</td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td>
+          <td class="cel"><span class="marca m-par">Parcial</span></td><td class="cel"><span class="marca m-no">No</span></td><td class="cel"><span class="marca m-no">No</span></td></tr>
+        <tr><td class="func">Control horario y presencia</td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-no">No</span></td></tr>
+        <tr><td class="func">Ausencias y permisos TREBEP</td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-par">Genérico</span></td><td class="cel"><span class="marca m-no">No</span></td></tr>
+        <tr><td class="func">Portal del empleado</td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-no">No</span></td></tr>
+        <tr><td class="func">Nómina</td>
+          <td class="cel"><span class="marca m-no">Fuera de alcance</span></td><td class="cel"><span class="marca m-si">Sí</span></td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-no">No</span></td></tr>
+        <tr><td class="func">Selección, OEP y bolsas de trabajo</td>
+          <td class="cel"><span class="marca m-no">No</span></td><td class="cel"><span class="marca m-si">Sí</span></td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-par">Documental</span></td></tr>
+        <tr><td class="func">Formación y evaluación</td>
+          <td class="cel"><span class="marca m-no">No</span></td><td class="cel"><span class="marca m-si">Sí</span></td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-par">Aula virtual</span></td></tr>
+        <tr><td class="func">Turnos y cuadrantes</td>
+          <td class="cel"><span class="marca m-no">No</span></td><td class="cel"><span class="marca m-par">Parcial</span></td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-no">No</span></td></tr>
+        <tr><td class="func">Enlace contable y organismos oficiales</td>
+          <td class="cel"><span class="marca m-no">No</span></td><td class="cel"><span class="marca m-si">Sí</span></td>
+          <td class="cel"><span class="marca m-par">Parcial</span></td><td class="cel"><span class="marca m-no">No</span></td><td class="cel"><span class="marca m-no">No</span></td></tr>
+        <tr><td class="func">Firma digital</td>
+          <td class="cel"><span class="marca m-no">No</span></td><td class="cel"><span class="marca m-par">Parcial</span></td>
+          <td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-si">Sí</span></td><td class="cel"><span class="marca m-no">No</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="leyenda">
+    <span><span class="marca m-si">Sí</span> cubierto</span>
+    <span><span class="marca m-par">Parcial</span> cubierto en parte</span>
+    <span><span class="marca m-no">No</span> no cubierto</span>
+    <span style="color:var(--faint)">«Fuera de alcance» es una decisión de producto, no una carencia.</span>
+  </p>
+
+  <h2><span class="n">04</span>Dónde ganamos</h2>
+  <p class="sub">
+    Seis garantías que ninguno de los cuatro pone por delante, y que son exactamente lo que se exige
+    en un pliego del sector público.
+  </p>
+  <div class="rejilla">
+    <div class="ficha"><h3>Cero biometría</h3><p>Por criterio de la AEPD: no existe ni un campo biométrico. Sustituye al terminal de huella sin el riesgo legal.</p></div>
+    <div class="ficha"><h3>Registro inmutable</h3><p>Fichajes que no se pueden alterar, con encadenamiento de hash, conforme al RD de registro horario digital.</p></div>
+    <div class="ficha"><h3>ENS categoría media</h3><p>Mapa del Anexo II medida a medida, listo para entregar al auditor.</p></div>
+    <div class="ficha"><h3>Aislamiento por entidad</h3><p>Cada ayuntamiento queda aislado en la propia base de datos: son responsables del tratamiento distintos.</p></div>
+    <div class="ficha"><h3>Accesibilidad AA verificada</h3><p>Contraste y navegación medidos sobre la aplicación en marcha, obligatorio por el RD 1112/2018.</p></div>
+    <div class="ficha"><h3>Reglas sin desarrollo</h3><p>Cada acuerdo o convenio se configura desde la interfaz, sin un desarrollo a medida por cliente.</p></div>
+  </div>
+
+  <h2><span class="n">05</span>Lo que falta para poder vender</h2>
+  <p class="sub">
+    La vía que propone José —contratos por debajo de 60.000 €, que eximen de acreditar solvencia—
+    exige poder <b>instalar y entregar</b>. Estos tres puntos no son módulos nuevos: son lo que separa
+    un prototipo demostrable de un producto facturable.
+  </p>
+  <ol class="bloq">
+    <li>
+      <h3>Alta de usuarios desde la aplicación</h3>
+      <p>Hoy los accesos se crean en el arranque de datos. Sin esto no se puede dar de alta a la
+         plantilla de un cliente nuevo.</p>
+    </li>
+    <li>
+      <h3>Pantalla de quiosco</h3>
+      <p>El fichaje compartido existe en la API pero no tiene interfaz. Es justo el argumento
+         comercial que sustituye al terminal de huella ilegal.</p>
+    </li>
+    <li>
+      <h3>HTTPS y secretos fuera del despliegue</h3>
+      <p>Cifrado en tránsito y gestión de secretos: requisito del ENS y condición para salir de un
+         entorno local.</p>
+    </li>
+  </ol>
+
+  <footer>
+    Fuentes: código de la plataforma (inventario de endpoints y pantallas) e información pública de
+    factorial.es, espublico.com, savia.net y grupocastilla.es. Documento interno de trabajo.
+  </footer>
+</div>

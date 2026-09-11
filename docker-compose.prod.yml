@@ -1,19 +1,19 @@
 # Despliegue "como en producción": Postgres + API compilada + nginx (SPA + proxy).
 # Un solo origen expuesto: http://localhost:8080
 #
-#   docker compose -f docker-compose.prod.yml up --build -d
 #
-# NOTA de seguridad: en un despliegue real, los secretos (APP_ENCRYPTION_KEY,
-# contraseñas) van en un gestor de secretos, no en el fichero. Aquí son de demo.
+# Los secretos NO viven aquí: se leen de .env.prod, fuera del control de versiones.
+# Genéralo con  scripts/preparar-produccion.sh  y arranca con:
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 
 # Proyecto propio para que NO colisione con el entorno de desarrollo
 # (docker-compose.yml), que usa el mismo nombre de servicio `db`.
 name: rrhh-prod
 
 x-secrets: &secrets
-  DATABASE_URL_OWNER: postgres://rrhh_owner:rrhh_owner_prod_pwd@db:5432/rrhh
-  DATABASE_URL_APP: postgres://rrhh_app:dev_app_pwd@db:5432/rrhh
-  APP_ENCRYPTION_KEY: "2rAM8ZdJkL8S8vbxcIuSXdIkMj0vkejT4tW05GOs+Og="
+  DATABASE_URL_OWNER: postgres://rrhh_owner:${DB_OWNER_PWD}@db:5432/rrhh
+  DATABASE_URL_APP: postgres://rrhh_app:${DB_APP_PWD}@db:5432/rrhh
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
   NODE_ENV: production
 
 services:
@@ -22,7 +22,7 @@ services:
     container_name: rrhh_db_prod
     environment:
       POSTGRES_USER: rrhh_owner
-      POSTGRES_PASSWORD: rrhh_owner_prod_pwd
+      POSTGRES_PASSWORD: ${DB_OWNER_PWD}
       POSTGRES_DB: rrhh
       TZ: Europe/Madrid
       PGTZ: Europe/Madrid
@@ -68,7 +68,12 @@ services:
     build: { context: ., dockerfile: apps/web/Dockerfile }
     container_name: rrhh_web_prod
     ports:
-      - "8080:80"
+      - "${PUERTO_HTTP:-8080}:80"
+      - "${PUERTO_HTTPS:-8443}:443"
+    volumes:
+      # Config seleccionable: nginx.conf (HTTP) o nginx-https.conf (TLS).
+      - ./apps/web/${NGINX_CONF:-nginx.conf}:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - api
     restart: unless-stopped

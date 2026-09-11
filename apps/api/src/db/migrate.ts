@@ -1,10 +1,35 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import type pg from 'pg';
 import { ownerPool } from './pool.js';
+import { env } from '../config/env.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, '..', 'migrations');
+
+/**
+ * La migración crea el rol de aplicación con una contraseña de arranque. Aquí se
+ * sincroniza con la que realmente usa la aplicación (DATABASE_URL_APP), de modo
+ * que la credencial viva en la configuración del despliegue y no en el SQL.
+ * Nombre y contraseña viajan como parámetros de sesión y los compone `format`,
+ * así que nunca se concatenan a mano dentro de la sentencia.
+ */
+async function sincronizarPasswordApp(client: pg.PoolClient): Promise<void> {
+  const url = new URL(env.DATABASE_URL_APP);
+  const usuario = decodeURIComponent(url.username);
+  const password = decodeURIComponent(url.password);
+  if (!usuario || !password) return;
+  await client.query('SELECT set_config($1,$2,false), set_config($3,$4,false)', [
+    'app.rol_nombre', usuario, 'app.rol_pwd', password,
+  ]);
+  await client.query(
+    "DO $sync$ BEGIN " +
+    "  EXECUTE format('ALTER ROLE %I WITH PASSWORD %L', " +
+    "                 current_setting('app.rol_nombre'), current_setting('app.rol_pwd')); " +
+    "END $sync$;",
+  );
+}
 
 /**
  * Runner de migraciones versionadas. Cada fichero .sql se ejecuta una sola vez,
@@ -46,6 +71,7 @@ export async function migrar(): Promise<string[]> {
         throw new Error(`Fallo en migración ${fichero}: ${(err as Error).message}`);
       }
     }
+    await sincronizarPasswordApp(client);
     return aplicadas;
   } finally {
     client.release();

@@ -9,6 +9,7 @@ import { appPool } from '../db/pool.js';
 import { rutasHorario } from './horario.js';
 import { rutasAusencias } from './ausencias.js';
 import { rutasPortal } from './portal.js';
+import { rutasUsuarios } from './usuarios.js';
 import {
   cambioSituacionSchema, ceseSchema, loginSchema, personaSchema,
   plazaSchema, puestoSchema, relacionSchema, unidadSchema,
@@ -67,6 +68,9 @@ export function crearApp() {
   // ----------------------- CUADRO DE MANDO (gestión) -----------------------
   app.get('/admin/panel', requiereSesion, requiereRol('ADMIN_ENTIDAD', 'GESTOR_PERSONAL'),
     h(async (req, res) => res.json(await panelDireccion(ctxDe(req)))));
+
+  // --------------------------- ACCESOS / USUARIOS --------------------------
+  app.use('/admin/usuarios', requiereSesion, rutasUsuarios());
 
   // ----------------------- REGISTRO DE ACTIVIDAD (ENS) ---------------------
   app.get('/admin/registro-actividad', requiereSesion, requiereRol('ADMIN_ENTIDAD'),

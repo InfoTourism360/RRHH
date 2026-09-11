@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
 import { Layout } from './Layout';
 import { Cargando } from './ui';
@@ -11,6 +11,8 @@ import { GesActividad } from './pages/GesActividad';
 import { GesHorario } from './pages/GesHorario';
 import { GesConfiguracion } from './pages/GesConfiguracion';
 import { Avisos } from './pages/Avisos';
+import { GesUsuarios } from './pages/GesUsuarios';
+import { Quiosco } from './pages/Quiosco';
 import { Inicio } from './pages/Inicio';
 import { MisFichajes } from './pages/MisFichajes';
 import { MisAusencias } from './pages/MisAusencias';
@@ -21,6 +23,11 @@ import { Accesibilidad } from './pages/Accesibilidad';
 
 export function App() {
   const { yo, cargando } = useAuth();
+  const loc = useLocation();
+
+  // El quiosco es un terminal compartido: se sirve sin sesión y sin el layout
+  // de la aplicación, antes incluso de resolver la autenticación.
+  if (loc.pathname === '/quiosco') return <Quiosco />;
 
   if (cargando) {
     return <div className="min-h-screen grid place-items-center"><Cargando /></div>;
@@ -36,6 +43,7 @@ export function App() {
   }
 
   const esGestion = yo.roles.some((r) => ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'].includes(r.rol));
+  const esAdmin = yo.roles.some((r) => r.rol === 'ADMIN_ENTIDAD');
 
   return (
     <Layout>
@@ -48,6 +56,7 @@ export function App() {
         {esGestion && <Route path="/publicaciones" element={<GesDocumentos />} />}
         {esGestion && <Route path="/configuracion" element={<GesConfiguracion />} />}
         {esGestion && <Route path="/actividad" element={<GesActividad />} />}
+        {esAdmin && <Route path="/accesos" element={<GesUsuarios />} />}
         <Route path="/inicio" element={<Inicio />} />
         <Route path="/avisos" element={<Avisos />} />
         <Route path="/fichajes" element={<MisFichajes />} />

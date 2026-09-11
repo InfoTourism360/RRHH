@@ -10,6 +10,9 @@ export function setToken(t: string | null): void {
   try { t ? localStorage.setItem(CLAVE_TOKEN, t) : localStorage.removeItem(CLAVE_TOKEN); } catch { /* ignore */ }
 }
 
+/** Se emite cuando el servidor rechaza la sesión: la app vuelve al login. */
+export const EVENTO_SESION_CADUCADA = 'rrhh:sesion-caducada';
+
 export class ApiError extends Error {
   constructor(public status: number, mensaje: string, public codigo?: string) { super(mensaje); }
 }
@@ -29,7 +32,12 @@ async function req<T>(metodo: string, ruta: string, body?: unknown): Promise<T> 
   const texto = await res.text();
   const datos = texto ? JSON.parse(texto) : undefined;
   if (!res.ok) {
-    if (res.status === 401) setToken(null);
+    if (res.status === 401) {
+      // Antes solo se borraba el token en silencio: el usuario se quedaba en una
+      // pantalla que fallaba sin explicar nada hasta recargar a mano.
+      setToken(null);
+      window.dispatchEvent(new CustomEvent(EVENTO_SESION_CADUCADA));
+    }
     throw new ApiError(res.status, datos?.error ?? 'Error de red', datos?.codigo);
   }
   return datos as T;

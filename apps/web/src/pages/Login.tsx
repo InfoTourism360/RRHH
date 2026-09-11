@@ -4,7 +4,7 @@ import { ApiError } from '../api';
 import { Alerta, Campo } from '../ui';
 
 export function Login() {
-  const { entrar } = useAuth();
+  const { entrar, caducada } = useAuth();
   const [cif, setCif] = useState('P4600001A');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,6 +65,13 @@ export function Login() {
             <p className="text-apagado mb-6">Accede con las credenciales de tu entidad.</p>
 
             <form onSubmit={onSubmit} noValidate>
+              {caducada && !error && (
+                <div className="mb-4">
+                  <Alerta tipo="info">
+                    Tu sesión ha caducado por inactividad. Vuelve a identificarte para continuar.
+                  </Alerta>
+                </div>
+              )}
               {error && <div className="mb-4"><Alerta tipo="error">{error}</Alerta></div>}
               <Campo etiqueta="CIF de la entidad" value={cif} onChange={(e) => setCif(e.target.value)}
                      autoComplete="organization" required />

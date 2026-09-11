@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, setToken, getToken } from './api';
+import { api, setToken, getToken, EVENTO_SESION_CADUCADA } from './api';
 
 export interface Rol { rol: string; unidadId: string | null }
 interface Yo { entidadId: string; usuarioId: string; personaId: string | null; roles: Rol[] }
 
 interface AuthCtx {
+  caducada: boolean;
   yo: Yo | null;
   cargando: boolean;
   entrar: (cif: string, email: string, password: string, totp?: string) => Promise<void>;
@@ -17,6 +18,7 @@ const Ctx = createContext<AuthCtx | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [yo, setYo] = useState<Yo | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [caducada, setCaducada] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -27,9 +29,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // Si el servidor rechaza la sesión (expiración o inactividad), se sale del
+  // área privada y se avisa, en lugar de dejar la pantalla fallando.
+  useEffect(() => {
+    const alCaducar = () => { setYo((actual) => { if (actual) setCaducada(true); return null; }); };
+    window.addEventListener(EVENTO_SESION_CADUCADA, alCaducar);
+    return () => window.removeEventListener(EVENTO_SESION_CADUCADA, alCaducar);
+  }, []);
+
   const entrar = async (cif: string, email: string, password: string, totp?: string) => {
     const r = await api.post<{ token: string }>('/auth/login', { cif, email, password, ...(totp ? { totp } : {}) });
     setToken(r.token);
+    setCaducada(false);
     setYo(await api.get<Yo>('/auth/yo'));
   };
 
@@ -40,9 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const valor = useMemo<AuthCtx>(() => ({
-    yo, cargando, entrar, salir,
+    yo, cargando, caducada, entrar, salir,
     tieneRol: (...roles) => !!yo?.roles.some((r) => roles.includes(r.rol)),
-  }), [yo, cargando]);
+  }), [yo, cargando, caducada]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

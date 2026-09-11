@@ -125,14 +125,41 @@ export function filtrar<T extends object>(filas: T[], campos: string[], q: strin
   );
 }
 
+const ENFOCABLES =
+  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),' +
+  'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
 export function Modal({ titulo, children, onCerrar }: { titulo: string; children: ReactNode; onCerrar: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const id = useId();
   useEffect(() => {
-    ref.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCerrar(); };
+    // Quién tenía el foco antes de abrir: hay que devolvérselo al cerrar.
+    const previo = document.activeElement as HTMLElement | null;
+    const panel = ref.current;
+    // Enfoca el primer control del diálogo; si no hay, el propio panel.
+    const primero = panel?.querySelector<HTMLElement>(ENFOCABLES);
+    (primero ?? panel)?.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onCerrar(); return; }
+      if (e.key !== 'Tab' || !panel) return;
+      // Retiene el foco dentro del diálogo: sin esto el tabulador se escapa al
+      // contenido de detrás, que es justo lo que un diálogo modal no debe hacer.
+      const focos = [...panel.querySelectorAll<HTMLElement>(ENFOCABLES)]
+        .filter((el) => el.offsetParent !== null);
+      if (focos.length === 0) { e.preventDefault(); panel.focus(); return; }
+      const inicio = focos[0]!, fin = focos[focos.length - 1]!;
+      const activo = document.activeElement;
+      if (e.shiftKey && (activo === inicio || activo === panel)) { e.preventDefault(); fin.focus(); }
+      else if (!e.shiftKey && activo === fin) { e.preventDefault(); inicio.focus(); }
+      else if (!panel.contains(activo)) { e.preventDefault(); inicio.focus(); }
+    };
+
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      previo?.focus?.();
+    };
   }, [onCerrar]);
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">

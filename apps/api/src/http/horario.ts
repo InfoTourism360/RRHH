@@ -11,6 +11,7 @@ import { informeCSV, informePDF, hashInforme, type MetaInforme } from '../domain
 import { ExportadorInspeccionProvisional } from '../domain/export/inspeccion.js';
 import { autenticarQuiosco, establecerPin } from '../auth/service.js';
 import { requiereRol, requiereSesion, validar, ctxDe } from './middleware.js';
+import { limitarPorOrigen } from './limites.js';
 import {
   ficharSchema, quioscoFicharSchema, correccionSchema, pinSchema, rangoSchema,
 } from '../validation/schemas.js';
@@ -64,7 +65,11 @@ export function rutasHorario(): Router {
   const r = Router();
 
   // Fichaje de QUIOSCO: sin sesión, identificación por credencial + PIN.
-  r.post('/quiosco/fichar', validar(quioscoFicharSchema), h(async (req, res) => {
+  // El quiosco valida un PIN: límite por origen para que no se pueda probar a
+  // ciegas desde el propio terminal o desde fuera.
+  r.post('/quiosco/fichar',
+    limitarPorOrigen({ nombre: 'quiosco', ventanaMs: 60_000, maximo: 30 }),
+    validar(quioscoFicharSchema), h(async (req, res) => {
     const { cif, email, pin, ...ficha } = req.body;
     const q = await autenticarQuiosco({ cif, email, pin });
     const ev = await fichar({ entidadId: q.entidadId, usuarioId: q.usuarioId }, {

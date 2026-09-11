@@ -10,6 +10,7 @@ import { rutasHorario } from './horario.js';
 import { rutasAusencias } from './ausencias.js';
 import { rutasPortal } from './portal.js';
 import { rutasUsuarios } from './usuarios.js';
+import { limitarPorOrigen } from './limites.js';
 import {
   cambioSituacionSchema, ceseSchema, loginSchema, personaSchema,
   plazaSchema, puestoSchema, relacionSchema, unidadSchema,
@@ -26,6 +27,8 @@ export function crearApp() {
   const app = express();
   // Detrás de un reverse proxy (nginx): usa X-Forwarded-* para obtener la IP real.
   app.set('trust proxy', 1);
+  // No anunciar la tecnología del servidor (X-Powered-By: Express).
+  app.disable('x-powered-by');
   // 8 MB para permitir la subida de documentos en base64 (p. ej. nóminas PDF).
   app.use(express.json({ limit: '8mb' }));
 
@@ -41,12 +44,19 @@ export function crearApp() {
     }
   }));
 
+  // Límite general por origen, como red de seguridad frente a abuso.
+  app.use(limitarPorOrigen({ nombre: 'general', ventanaMs: 60_000, maximo: 300 }));
+
   // Registro de actividad ENS: traza cada petición (tras resolver la sesión más
   // abajo, la traza incluye usuario/entidad cuando existen).
   app.use(registroActividad);
 
   // ------------------------------ AUTH -------------------------------------
-  app.post('/auth/login', validar(loginSchema), h(async (req, res) => {
+  // Credenciales: límite estricto por origen. El bloqueo por intentos protege
+  // una cuenta concreta; esto frena probar muchas cuentas desde el mismo sitio.
+  app.post('/auth/login',
+    limitarPorOrigen({ nombre: 'login', ventanaMs: 5 * 60_000, maximo: 20 }),
+    validar(loginSchema), h(async (req, res) => {
     const { token, sesion } = await login({
       ...req.body,
       ip: req.ip ?? null,

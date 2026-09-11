@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Cargando, Tarjeta, Etiqueta } from '../ui';
+import { Cargando, Tarjeta, Etiqueta, CabeceraPagina } from '../ui';
 import { TIPOS_RELACION, SITUACIONES, etiqueta } from '../catalogos';
 
 interface Datos {
@@ -32,8 +32,7 @@ export function MisDatos() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Mis datos</h1>
-      <p className="text-apagado mb-6">Consulta de tu ficha y tu situación administrativa.</p>
+      <CabeceraPagina titulo="Mis datos" descripcion="Consulta de tu ficha y tu situación administrativa." />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Tarjeta titulo="Datos personales">

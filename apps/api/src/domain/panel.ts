@@ -6,33 +6,32 @@ export function panelDireccion(ctx: Contexto) {
   return conTenant(ctx, async (ej) => {
     const uno = async (sql: string) => (await ej.query(sql)).rows;
 
-    const [efectivos] = await uno(
-      `SELECT count(*)::int n FROM relacion_servicio WHERE cese IS NULL AND ocupa_efectivo`);
-    const [plazas] = await uno(
-      `SELECT count(*)::int n FROM plaza WHERE vigencia_hasta IS NULL`);
-    const [vacantes] = await uno(
-      `SELECT count(*)::int n FROM v_plaza_estado WHERE vacante`);
-    const [pendientes] = await uno(
-      `SELECT count(*)::int n FROM solicitud_ausencia WHERE estado = 'SOLICITADA'`);
-
-    const porGrupo = await uno(
-      `SELECT pl.grupo_codigo k, count(*)::int v
-         FROM relacion_servicio rs JOIN puesto pu ON pu.id=rs.puesto_id JOIN plaza pl ON pl.id=pu.plaza_id
-        WHERE rs.cese IS NULL AND rs.ocupa_efectivo GROUP BY pl.grupo_codigo ORDER BY pl.grupo_codigo`);
-    const porUnidad = await uno(
-      `SELECT u.denominacion k, count(*)::int v
-         FROM relacion_servicio rs JOIN puesto pu ON pu.id=rs.puesto_id JOIN unidad_organica u ON u.id=pu.unidad_id
-        WHERE rs.cese IS NULL AND rs.ocupa_efectivo GROUP BY u.denominacion ORDER BY count(*) DESC`);
-    const porVinculo = await uno(
-      `SELECT tipo_codigo k, count(*)::int v
-         FROM relacion_servicio WHERE cese IS NULL AND ocupa_efectivo GROUP BY tipo_codigo ORDER BY count(*) DESC`);
-    const porSituacion = await uno(
-      `SELECT situacion_codigo k, count(*)::int v
-         FROM relacion_servicio WHERE cese IS NULL GROUP BY situacion_codigo ORDER BY count(*) DESC`);
-    const porNivel = await uno(
-      `SELECT CASE WHEN nivel_cd<=14 THEN '1-14' WHEN nivel_cd<=20 THEN '15-20'
-                   WHEN nivel_cd<=26 THEN '21-26' ELSE '27-30' END k, count(*)::int v
-         FROM puesto WHERE vigencia_hasta IS NULL GROUP BY k ORDER BY k`);
+    // Todas las agregaciones se lanzan en paralelo sobre la misma conexión de
+    // la transacción: antes eran 10 round-trips encadenados en la pantalla que
+    // más se abre del producto.
+    const [
+      efectivosR, plazasR, vacantesR, pendientesR,
+      porGrupo, porUnidad, porVinculo, porSituacion, porNivel,
+    ] = await Promise.all([
+      uno(`SELECT count(*)::int n FROM relacion_servicio WHERE cese IS NULL AND ocupa_efectivo`),
+      uno(`SELECT count(*)::int n FROM plaza WHERE vigencia_hasta IS NULL`),
+      uno(`SELECT count(*)::int n FROM v_plaza_estado WHERE vacante`),
+      uno(`SELECT count(*)::int n FROM solicitud_ausencia WHERE estado = 'SOLICITADA'`),
+      uno(`SELECT pl.grupo_codigo k, count(*)::int v
+             FROM relacion_servicio rs JOIN puesto pu ON pu.id=rs.puesto_id JOIN plaza pl ON pl.id=pu.plaza_id
+            WHERE rs.cese IS NULL AND rs.ocupa_efectivo GROUP BY pl.grupo_codigo ORDER BY pl.grupo_codigo`),
+      uno(`SELECT u.denominacion k, count(*)::int v
+             FROM relacion_servicio rs JOIN puesto pu ON pu.id=rs.puesto_id JOIN unidad_organica u ON u.id=pu.unidad_id
+            WHERE rs.cese IS NULL AND rs.ocupa_efectivo GROUP BY u.denominacion ORDER BY count(*) DESC`),
+      uno(`SELECT tipo_codigo k, count(*)::int v
+             FROM relacion_servicio WHERE cese IS NULL AND ocupa_efectivo GROUP BY tipo_codigo ORDER BY count(*) DESC`),
+      uno(`SELECT situacion_codigo k, count(*)::int v
+             FROM relacion_servicio WHERE cese IS NULL GROUP BY situacion_codigo ORDER BY count(*) DESC`),
+      uno(`SELECT CASE WHEN nivel_cd<=14 THEN '1-14' WHEN nivel_cd<=20 THEN '15-20'
+                      WHEN nivel_cd<=26 THEN '21-26' ELSE '27-30' END k, count(*)::int v
+             FROM puesto WHERE vigencia_hasta IS NULL GROUP BY k ORDER BY k`),
+    ]);
+    const efectivos = efectivosR[0], plazas = plazasR[0], vacantes = vacantesR[0], pendientes = pendientesR[0];
 
     const total = efectivos!.n as number;
     const interinosTemp = (porVinculo as { k: string; v: number }[])

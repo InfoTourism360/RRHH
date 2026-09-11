@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Cargando, Tarjeta, Tabla, Etiqueta, type Columna } from '../ui';
+import { Cargando, Tarjeta, Tabla, Etiqueta, type Columna, CabeceraPagina } from '../ui';
 
 interface Traza {
   id: number; momento: string; usuario_id: string | null;
@@ -28,8 +28,7 @@ export function GesActividad() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Registro de actividad</h1>
-      <p className="text-apagado mb-6">Trazas de acceso y acciones (ENS). Registro inmutable y separado del log funcional.</p>
+      <CabeceraPagina titulo="Registro de actividad" descripcion="Trazas de acceso y acciones (ENS). Registro inmutable y separado del log funcional." />
       <Tarjeta titulo="Últimas trazas">
         {!filas ? <Cargando /> : <Tabla columnas={cols} filas={filas} vacio="Sin actividad registrada." />}
       </Tarjeta>

@@ -1,18 +1,24 @@
 import { useEffect, useState, useCallback, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError } from '../api';
 import {
-  Alerta, Boton, Campo, Selector, Tarjeta, Tabla, Modal, Etiqueta, Buscador, filtrar, type Columna,
+  Alerta, Boton, Campo, Selector, Tarjeta, Tabla, Modal, Etiqueta, Buscador, filtrar,
+  CabeceraPagina, Cargando, type Columna,
 } from '../ui';
 import {
   GRUPOS, ESCALAS, TIPOS_RELACION, SITUACIONES, FORMAS_PROVISION, JORNADAS, TIPOS_DOCUMENTO_ID, etiqueta,
 } from '../catalogos';
 
 type Fila = Record<string, unknown>;
-function useLista<T = Fila>(ruta: string): [T[], () => Promise<void>] {
+function useLista<T = Fila>(ruta: string): [T[], () => Promise<void>, boolean] {
   const [datos, setDatos] = useState<T[]>([]);
-  const cargar = useCallback(async () => { try { setDatos(await api.get<T[]>(ruta)); } catch { setDatos([]); } }, [ruta]);
+  // `cargando` evita el parpadeo de "sin datos" mientras llega la respuesta.
+  const [cargando, setCargando] = useState(true);
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    try { setDatos(await api.get<T[]>(ruta)); } catch { setDatos([]); } finally { setCargando(false); }
+  }, [ruta]);
   useEffect(() => { void cargar(); }, [cargar]);
-  return [datos, cargar];
+  return [datos, cargar, cargando];
 }
 
 const TABS = [
@@ -24,8 +30,7 @@ export function GesPlantilla() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('personas');
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Plantilla y RPT</h1>
-      <p className="text-apagado mb-5">Estructura organizativa: personas, unidades, plazas, puestos y su ocupación.</p>
+      <CabeceraPagina titulo="Plantilla y RPT" descripcion="Estructura organizativa: personas, unidades, plazas, puestos y su ocupación." />
 
       <div role="tablist" aria-label="Secciones de plantilla" className="flex flex-wrap gap-1 mb-5 border-b border-linea">
         {TABS.map(([k, t]) => (
@@ -58,7 +63,7 @@ function Aviso({ m }: { m: { tipo: 'exito' | 'error'; texto: string } | null }) 
 
 // --------------------------------- PERSONAS ---------------------------------
 function SecPersonas() {
-  const [filas, recargar] = useLista('/estructura/personas');
+  const [filas, recargar, cargando] = useLista('/estructura/personas');
   const [abrir, setAbrir] = useState(false);
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
@@ -87,7 +92,7 @@ function SecPersonas() {
       <Aviso m={msg} />
       <Cab titulo={`Personas (${visibles.length}${q ? ` de ${filas.length}` : ''})`} onNuevo={() => setAbrir(true)}>
         <Buscador valor={q} onCambio={setQ} placeholder="Buscar por nombre, apellidos o documento…" />
-        <Tabla columnas={cols} filas={visibles} vacio="Ninguna persona coincide con la búsqueda." />
+        {cargando ? <Cargando /> : <Tabla columnas={cols} filas={visibles} vacio="Ninguna persona coincide con la búsqueda." />}
       </Cab>
       {abrir && (
         <Modal titulo="Nueva persona" onCerrar={() => setAbrir(false)}>
@@ -113,7 +118,7 @@ function SecPersonas() {
 
 // --------------------------------- UNIDADES ---------------------------------
 function SecUnidades() {
-  const [filas, recargar] = useLista('/estructura/unidades');
+  const [filas, recargar, cargando] = useLista('/estructura/unidades');
   const [abrir, setAbrir] = useState(false);
   const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
   const [f, setF] = useState({ codigo: '', denominacion: '' });
@@ -126,7 +131,7 @@ function SecUnidades() {
     <>
       <Aviso m={msg} />
       <Cab titulo={`Unidades orgánicas (${filas.length})`} onNuevo={() => setAbrir(true)}>
-        <Tabla columnas={[{ k: 'codigo', txt: 'Código' }, { k: 'denominacion', txt: 'Denominación' }]} filas={filas} />
+        {cargando ? <Cargando /> : <Tabla columnas={[{ k: 'codigo', txt: 'Código' }, { k: 'denominacion', txt: 'Denominación' }]} filas={filas} />}
       </Cab>
       {abrir && (
         <Modal titulo="Nueva unidad" onCerrar={() => setAbrir(false)}>
@@ -143,7 +148,7 @@ function SecUnidades() {
 
 // --------------------------------- PLAZAS -----------------------------------
 function SecPlazas() {
-  const [filas, recargar] = useLista('/estructura/plazas');
+  const [filas, recargar, cargando] = useLista('/estructura/plazas');
   const [abrir, setAbrir] = useState(false);
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
@@ -167,7 +172,7 @@ function SecPlazas() {
       <Aviso m={msg} />
       <Cab titulo={`Plazas (${visibles.length}${q ? ` de ${filas.length}` : ''})`} onNuevo={() => setAbrir(true)}>
         <Buscador valor={q} onCambio={setQ} placeholder="Buscar por código, denominación o grupo…" />
-        <Tabla columnas={cols} filas={visibles} vacio="Ninguna plaza coincide con la búsqueda." />
+        {cargando ? <Cargando /> : <Tabla columnas={cols} filas={visibles} vacio="Ninguna plaza coincide con la búsqueda." />}
       </Cab>
       {abrir && (
         <Modal titulo="Nueva plaza" onCerrar={() => setAbrir(false)}>
@@ -194,7 +199,7 @@ function SecPlazas() {
 
 // --------------------------------- PUESTOS ----------------------------------
 function SecPuestos() {
-  const [filas, recargar] = useLista('/estructura/puestos');
+  const [filas, recargar, cargando] = useLista('/estructura/puestos');
   const [plazas] = useLista<Fila>('/estructura/plazas');
   const [unidades] = useLista<Fila>('/estructura/unidades');
   const [abrir, setAbrir] = useState(false);
@@ -219,7 +224,7 @@ function SecPuestos() {
       <Aviso m={msg} />
       <Cab titulo={`Puestos de trabajo (${visibles.length}${q ? ` de ${filas.length}` : ''})`} onNuevo={() => setAbrir(true)}>
         <Buscador valor={q} onCambio={setQ} placeholder="Buscar por código o denominación…" />
-        <Tabla columnas={cols} filas={visibles} vacio="Ningún puesto coincide con la búsqueda." />
+        {cargando ? <Cargando /> : <Tabla columnas={cols} filas={visibles} vacio="Ningún puesto coincide con la búsqueda." />}
       </Cab>
       {abrir && (
         <Modal titulo="Nuevo puesto (RPT)" onCerrar={() => setAbrir(false)}>
@@ -253,7 +258,7 @@ function SecPuestos() {
 
 // -------------------------------- RELACIONES --------------------------------
 function SecRelaciones() {
-  const [filas, recargar] = useLista('/estructura/relaciones');
+  const [filas, recargar, cargando] = useLista('/estructura/relaciones');
   const [personas] = useLista<Fila>('/estructura/personas');
   const [puestos] = useLista<Fila>('/estructura/puestos');
   const [abrir, setAbrir] = useState(false);
@@ -281,7 +286,7 @@ function SecRelaciones() {
     <>
       <Aviso m={msg} />
       <Cab titulo={`Ocupación / relaciones de servicio (${filas.length})`} onNuevo={() => setAbrir(true)}>
-        <Tabla columnas={cols} filas={filas} />
+        {cargando ? <Cargando /> : <Tabla columnas={cols} filas={filas} />}
       </Cab>
       {abrir && (
         <Modal titulo="Nueva toma de posesión" onCerrar={() => setAbrir(false)}>

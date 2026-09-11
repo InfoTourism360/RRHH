@@ -274,22 +274,33 @@ export function calendarioEquipo(ctx: Contexto, unidadId: string, desde: string,
         ORDER BY s.fecha_inicio`, [unidadId, desde, hasta])).rows);
 }
 
+/**
+ * Saldos del año por tipo. Una sola consulta (antes hacía 1 + 2·N round-trips:
+ * un N+1 que crecía con cada tipo de ausencia con devengo).
+ */
 export function saldos(ctx: Contexto, personaId: string, anio: number) {
   return conTenant(ctx, async (ej) => {
-    const tipos = (await ej.query(`SELECT * FROM tipo_ausencia WHERE consume_saldo AND activo`)).rows;
-    const out = [];
-    for (const t of tipos) {
-      const asignado = Number(
-        (await ej.query('SELECT dias_asignados FROM saldo_ausencia WHERE persona_id=$1 AND tipo_ausencia_id=$2 AND anio=$3',
-          [personaId, t.id, anio])).rows[0]?.dias_asignados ?? 0);
-      const consumido = Number(
-        (await ej.query(
-          `SELECT COALESCE(SUM(dias_computados),0) c FROM solicitud_ausencia
-            WHERE persona_id=$1 AND tipo_ausencia_id=$2 AND estado='APROBADA' AND extract(year FROM fecha_inicio)=$3`,
-          [personaId, t.id, anio])).rows[0]?.c ?? 0);
-      out.push({ tipo: t.codigo, denominacion: t.denominacion, anio, asignado, consumido, disponible: asignado - consumido });
-    }
-    return out;
+    const r = await ej.query<{ tipo: string; denominacion: string; asignado: string; consumido: string }>(
+      `SELECT t.codigo AS tipo, t.denominacion,
+              COALESCE(s.dias_asignados, 0) AS asignado,
+              COALESCE(c.consumido, 0)      AS consumido
+         FROM tipo_ausencia t
+         LEFT JOIN saldo_ausencia s
+           ON s.tipo_ausencia_id = t.id AND s.persona_id = $1 AND s.anio = $2
+         LEFT JOIN LATERAL (
+           SELECT SUM(sa.dias_computados) AS consumido
+             FROM solicitud_ausencia sa
+            WHERE sa.tipo_ausencia_id = t.id AND sa.persona_id = $1
+              AND sa.estado = 'APROBADA' AND extract(year FROM sa.fecha_inicio) = $2
+         ) c ON true
+        WHERE t.consume_saldo AND t.activo
+        ORDER BY t.denominacion`,
+      [personaId, anio],
+    );
+    return r.rows.map((x) => {
+      const asignado = Number(x.asignado), consumido = Number(x.consumido);
+      return { tipo: x.tipo, denominacion: x.denominacion, anio, asignado, consumido, disponible: asignado - consumido };
+    });
   });
 }
 

@@ -194,3 +194,78 @@ export function Etiqueta({ tono = 'neutro', children }: { tono?: 'neutro' | 'exi
   }[tono];
   return <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${c}`}>{children}</span>;
 }
+
+// ---------------------------------------------------------------------------
+// Componentes compartidos. Antes estaban reimplementados en varias páginas, lo
+// que ya había producido diferencias visuales entre pantallas equivalentes.
+// ---------------------------------------------------------------------------
+
+/** Cabecera estándar de página. Sustituye 15 cabeceras duplicadas. */
+export function CabeceraPagina(
+  { titulo, descripcion, accion }: { titulo: string; descripcion?: ReactNode; accion?: ReactNode },
+) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 mb-6">
+      <div className="min-w-0">
+        <h1 className="text-2xl sm:text-[26px] font-extrabold leading-tight">{titulo}</h1>
+        {descripcion && <div className="text-apagado mt-1">{descripcion}</div>}
+      </div>
+      {accion}
+    </div>
+  );
+}
+
+export type TonoKpi = 'ok' | 'aviso' | 'neutro';
+
+/** Tarjeta de indicador. Única implementación para todo el producto. */
+export function Kpi(
+  { etiqueta, valor, pie, tono = 'neutro' }:
+  { etiqueta: string; valor: ReactNode; pie?: string; tono?: TonoKpi },
+) {
+  const punto = tono === 'ok' ? 'bg-exito' : tono === 'aviso' ? 'bg-aviso' : 'bg-marca-600';
+  return (
+    <div className="bg-white rounded-xl2 border border-linea shadow-tarjeta p-4">
+      <div className="flex items-start gap-2 text-xs font-semibold text-apagado uppercase tracking-wide">
+        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-none ${punto}`} aria-hidden="true" />
+        <span>{etiqueta}</span>
+      </div>
+      <div className="num text-[28px] leading-none font-bold mt-2.5">{valor}</div>
+      {pie && <div className="text-xs text-tenue mt-1.5">{pie}</div>}
+    </div>
+  );
+}
+
+/** Barra de consumo de un saldo de ausencias (empleado y gestión comparten esta). */
+export function BarraSaldo(
+  { denominacion, asignado, consumido, disponible }:
+  { denominacion: string; asignado: number; consumido: number; disponible: number },
+) {
+  const pct = asignado > 0 ? Math.min(100, Math.round((consumido / asignado) * 100)) : 0;
+  return (
+    <li>
+      <div className="flex justify-between items-baseline gap-3 mb-1.5">
+        <span className="font-semibold text-sm">{denominacion}</span>
+        <span className="num text-sm"><strong>{disponible}</strong> <span className="text-apagado">/ {asignado}</span></span>
+      </div>
+      <div className="h-2 rounded-full bg-lienzo border border-linea overflow-hidden"
+           role="img" aria-label={`${consumido} consumidos de ${asignado}`}>
+        <div className="h-full bg-marca-600" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-xs text-tenue mt-1">{consumido} consumidos · {disponible} disponibles</p>
+    </li>
+  );
+}
+
+/** Selector de mes (periodo) con el mismo estilo que el resto de campos. */
+export function SelectorMes({ valor, onCambio, etiqueta = 'Periodo' }:
+{ valor: string; onCambio: (v: string) => void; etiqueta?: string }) {
+  const id = useId();
+  return (
+    <div className="mb-4">
+      <label htmlFor={id} className="block text-sm font-semibold mb-1.5">{etiqueta}</label>
+      <input id={id} type="month" value={valor} onChange={(e) => onCambio(e.target.value)}
+             className="w-full rounded-lg border border-linea bg-white px-3.5 py-2.5
+                        focus:border-marca-500 focus:ring-4 focus:ring-marca-500/15 outline-none" />
+    </div>
+  );
+}

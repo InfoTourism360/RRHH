@@ -5,6 +5,7 @@ import * as est from '../domain/estructura.js';
 import { ctxDe, requiereRol, requiereSesion, validar, registroActividad } from './middleware.js';
 import { listarActividad } from '../domain/registroActividad.js';
 import { panelDireccion } from '../domain/panel.js';
+import { appPool } from '../db/pool.js';
 import { rutasHorario } from './horario.js';
 import { rutasAusencias } from './ausencias.js';
 import { rutasPortal } from './portal.js';
@@ -27,7 +28,17 @@ export function crearApp() {
   // 8 MB para permitir la subida de documentos en base64 (p. ej. nóminas PDF).
   app.use(express.json({ limit: '8mb' }));
 
-  app.get('/salud', (_req, res) => res.json({ ok: true }));
+  // Sonda de salud real: comprueba la conectividad con la base de datos.
+  // Si solo respondiera 200 fijo, un orquestador daría por sana una API que no
+  // puede servir nada (ocurrió: la BD caída devolvía `ok:true`).
+  app.get('/salud', h(async (_req, res) => {
+    try {
+      await appPool.query('SELECT 1');
+      res.json({ ok: true, bd: 'ok' });
+    } catch {
+      res.status(503).json({ ok: false, bd: 'no disponible' });
+    }
+  }));
 
   // Registro de actividad ENS: traza cada petición (tras resolver la sesión más
   // abajo, la traza incluye usuario/entidad cuando existen).

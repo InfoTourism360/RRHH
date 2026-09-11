@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import { api, ApiError } from '../api';
-import { Alerta, Boton, Campo, Selector, Tarjeta, Tabla, type Columna } from '../ui';
+import { Alerta, Boton, Campo, Selector, Tarjeta, Tabla, type Columna, CabeceraPagina, Cargando } from '../ui';
 import { TIPOS_DOC, etiqueta } from '../catalogos';
 
 interface Persona { id: string; nombre: string; apellido1: string; apellido2: string | null; num_documento: string }
@@ -18,7 +18,7 @@ function leerBase64(file: File): Promise<string> {
 export function GesDocumentos() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [personaId, setPersonaId] = useState('');
-  const [docs, setDocs] = useState<Doc[]>([]);
+  const [docs, setDocs] = useState<Doc[] | null>(null);
   const [tipo, setTipo] = useState('NOMINA');
   const [titulo, setTitulo] = useState('');
   const [fichero, setFichero] = useState<File | null>(null);
@@ -28,6 +28,7 @@ export function GesDocumentos() {
 
   const cargarDocs = useCallback(async () => {
     if (!personaId) return;
+    setDocs(null);
     try { setDocs(await api.get<Doc[]>(`/portal/admin/documentos?personaId=${personaId}`)); } catch { setDocs([]); }
   }, [personaId]);
   useEffect(() => { void cargarDocs(); }, [cargarDocs]);
@@ -60,8 +61,7 @@ export function GesDocumentos() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Documentos del personal</h1>
-      <p className="text-apagado mb-6">Publica documentación personal (incluidas nóminas en PDF). Cada descarga deja acuse.</p>
+      <CabeceraPagina titulo="Documentos del personal" descripcion="Publica documentación personal (incluidas nóminas en PDF). Cada descarga deja acuse." />
       {msg && <div className="mb-4"><Alerta tipo={msg.tipo}>{msg.texto}</Alerta></div>}
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -87,7 +87,7 @@ export function GesDocumentos() {
         </Tarjeta>
 
         <Tarjeta titulo="Documentos de la persona seleccionada">
-          <Tabla columnas={cols} filas={docs} vacio="Sin documentos publicados." />
+          {!docs ? <Cargando /> : <Tabla columnas={cols} filas={docs} vacio="Sin documentos publicados." />}
         </Tarjeta>
       </div>
     </div>

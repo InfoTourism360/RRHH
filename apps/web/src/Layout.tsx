@@ -48,7 +48,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="text-white font-bold">Gestión de Personal</div>
           <div className="text-[11px] text-white/60 tracking-wide uppercase">Sector público</div>
         </div>
-        <button className="ml-auto lg:hidden text-white/80 hover:text-white p-1" onClick={() => setAbierto(false)}
+        <button className="ml-auto lg:hidden text-white/80 hover:text-white w-11 h-11 grid place-items-center rounded-lg" onClick={() => setAbierto(false)}
                 aria-label="Cerrar menú"><IcoCerrar /></button>
       </div>
 
@@ -107,7 +107,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col min-w-0">
         {/* Top bar */}
         <header className="sticky top-0 z-30 h-16 bg-white/90 backdrop-blur border-b border-linea flex items-center gap-3 px-4 lg:px-8">
-          <button className="lg:hidden text-tinta p-1.5 -ml-1.5" onClick={() => setAbierto(true)} aria-label="Abrir menú">
+          <button className="lg:hidden text-tinta -ml-2 w-11 h-11 grid place-items-center rounded-lg hover:bg-lienzo" onClick={() => setAbierto(true)} aria-label="Abrir menú">
             <IcoMenu />
           </button>
           <span className="lg:hidden font-bold">Gestión de Personal</span>

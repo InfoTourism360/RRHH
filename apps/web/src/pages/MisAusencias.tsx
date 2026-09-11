@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import { api, ApiError } from '../api';
-import { Alerta, Boton, Campo, Cargando, Selector, Tarjeta, Tabla, Etiqueta, type Columna } from '../ui';
+import { Alerta, Boton, Campo, Cargando, Selector, Tarjeta, Tabla, Etiqueta, type Columna, CabeceraPagina, BarraSaldo } from '../ui';
 
 interface Tipo { id: string; codigo: string; denominacion: string; unidad_computo: string; requiere_justificante: boolean; base_normativa: string | null }
 interface Saldo { tipo: string; denominacion: string; asignado: number; consumido: number; disponible: number }
@@ -89,8 +89,7 @@ export function MisAusencias() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Mis ausencias</h1>
-      <p className="text-apagado mb-6">Solicita vacaciones y permisos y consulta tu saldo.</p>
+      <CabeceraPagina titulo="Mis ausencias" descripcion="Solicita vacaciones y permisos y consulta tu saldo." />
       {msg && <div className="mb-4"><Alerta tipo={msg.tipo}>{msg.texto}</Alerta></div>}
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -122,22 +121,10 @@ export function MisAusencias() {
         <Tarjeta titulo="Mis saldos del año">
           {saldos.length === 0 ? <p className="text-apagado">Sin saldos con cómputo anual.</p> : (
             <ul className="space-y-4">
-              {saldos.map((s) => {
-                const pct = s.asignado > 0 ? Math.round((s.consumido / s.asignado) * 100) : 0;
-                return (
-                  <li key={s.tipo}>
-                    <div className="flex justify-between items-baseline mb-1.5">
-                      <span className="font-semibold text-sm">{s.denominacion}</span>
-                      <span className="num text-sm"><strong>{s.disponible}</strong> <span className="text-apagado">/ {s.asignado}</span></span>
-                    </div>
-                    <div className="h-2 rounded-full bg-lienzo border border-linea overflow-hidden"
-                         role="img" aria-label={`${s.consumido} de ${s.asignado} consumidos`}>
-                      <div className="h-full bg-marca-500" style={{ width: `${pct}%` }} />
-                    </div>
-                    <p className="text-xs text-tenue mt-1">{s.consumido} consumidos · {s.disponible} disponibles</p>
-                  </li>
-                );
-              })}
+              {saldos.map((s) => (
+                <BarraSaldo key={s.tipo} denominacion={s.denominacion}
+                  asignado={s.asignado} consumido={s.consumido} disponible={s.disponible} />
+              ))}
             </ul>
           )}
         </Tarjeta>

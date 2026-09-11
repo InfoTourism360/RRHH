@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
-import { Boton, Cargando, Etiqueta, Tarjeta } from '../ui';
+import { Boton, Cargando, Etiqueta, Tarjeta, CabeceraPagina } from '../ui';
 
 interface Noti { id: string; tipo: string; mensaje: string; datos: Record<string, unknown>; creado_en: string; leida_en: string | null }
 
@@ -26,8 +26,7 @@ export function Avisos() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Mis avisos</h1>
-      <p className="text-apagado mb-6">Resoluciones de tus solicitudes y correcciones sobre tus fichajes.</p>
+      <CabeceraPagina titulo="Mis avisos" descripcion="Resoluciones de tus solicitudes y correcciones sobre tus fichajes." />
 
       <Tarjeta
         titulo={sinLeer ? `Sin leer (${sinLeer})` : 'Todos los avisos'}

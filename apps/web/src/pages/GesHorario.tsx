@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api, descargar, ApiError } from '../api';
 import {
   Alerta, Boton, Campo, Cargando, Etiqueta, Modal, Selector, Tabla, Tarjeta, minAHoras, type Columna,
-} from '../ui';
+  CabeceraPagina, Kpi } from '../ui';
+import { mesActual, rangoDeMes } from '../fechas';
 import { ETIQUETA_FICHAJE } from '../FicharWidget';
 
 interface Persona { id: string; nombre: string; apellido1: string; apellido2: string | null; num_documento: string }
@@ -13,22 +14,13 @@ interface Evento {
 interface Dia { fecha: string; trabajadoMin: number; teoricoMin: number; saldoMin: number; esFestivo: boolean; esAusencia: boolean; extrasMin: number; festivoMin: number }
 interface Total { dias: Dia[]; totales: { trabajadoMin: number; teoricoMin: number; saldoMin: number; extrasMin: number; festivoMin: number } }
 
-function mesPorDefecto() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-function rangoDeMes(mes: string) {
-  const [a, m] = mes.split('-').map(Number);
-  const ultimo = new Date(a!, m!, 0).getDate();
-  return { desde: `${mes}-01`, hasta: `${mes}-${String(ultimo).padStart(2, '0')}` };
-}
 
 type Accion = 'MODIFICA' | 'ANULA' | 'ANADE';
 
 export function GesHorario() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [personaId, setPersonaId] = useState('');
-  const [mes, setMes] = useState(mesPorDefecto());
+  const [mes, setMes] = useState(mesActual());
   const [eventos, setEventos] = useState<Evento[] | null>(null);
   const [total, setTotal] = useState<Total | null>(null);
   const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
@@ -51,8 +43,12 @@ export function GesHorario() {
     if (!personaId) return;
     setEventos(null); setTotal(null);
     const q = `desde=${desde}&hasta=${hasta}&personaId=${personaId}`;
-    try { setEventos(await api.get<Evento[]>(`/horario/fichajes?${q}`)); } catch { setEventos([]); }
-    try { setTotal(await api.get<Total>(`/horario/totalizacion?${q}`)); } catch { setTotal(null); }
+    // Ambas peticiones en paralelo (antes encadenadas).
+    const [evs, tot] = await Promise.all([
+      api.get<Evento[]>(`/horario/fichajes?${q}`).catch(() => [] as Evento[]),
+      api.get<Total>(`/horario/totalizacion?${q}`).catch(() => null),
+    ]);
+    setEventos(evs); setTotal(tot);
   }, [personaId, desde, hasta]);
   useEffect(() => { void cargar(); }, [cargar]);
 
@@ -127,8 +123,7 @@ export function GesHorario() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Control horario</h1>
-      <p className="text-apagado mb-6">Jornada por empleado, correcciones trazadas e informes con hash de integridad.</p>
+      <CabeceraPagina titulo="Control horario" descripcion="Jornada por empleado, correcciones trazadas e informes con hash de integridad." />
       {msg && <div className="mb-4"><Alerta tipo={msg.tipo}>{msg.texto}</Alerta></div>}
 
       <Tarjeta>
@@ -167,12 +162,7 @@ export function GesHorario() {
             ['Saldo', minAHoras(total.totales.saldoMin)],
             ['Extras', minAHoras(total.totales.extrasMin)],
             ['En festivo', minAHoras(total.totales.festivoMin)],
-          ].map(([t, v]) => (
-            <div key={t} className="bg-white rounded-xl2 border border-linea shadow-tarjeta p-4">
-              <div className="text-xs font-semibold text-apagado uppercase tracking-wide">{t}</div>
-              <div className="num text-2xl font-bold mt-2">{v}</div>
-            </div>
-          ))}
+          ].map(([t, v]) => <Kpi key={t} etiqueta={t!} valor={v!} />)}
         </section>
       )}
 

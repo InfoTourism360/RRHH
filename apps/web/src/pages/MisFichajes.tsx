@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api, descargar } from '../api';
-import { Boton, Cargando, Etiqueta, Tarjeta, Tabla, minAHoras, type Columna } from '../ui';
+import { Boton, Cargando, Etiqueta, Tarjeta, Tabla, minAHoras, type Columna, CabeceraPagina, Kpi } from '../ui';
+import { mesActual, rangoDeMes } from '../fechas';
 import { FicharWidget, ETIQUETA_FICHAJE } from '../FicharWidget';
 
 interface Evento {
@@ -11,27 +12,21 @@ interface Evento {
 interface Dia { fecha: string; trabajadoMin: number; teoricoMin: number; saldoMin: number; esFestivo: boolean; esAusencia: boolean; extrasMin: number }
 interface Total { dias: Dia[]; totales: { trabajadoMin: number; teoricoMin: number; saldoMin: number; extrasMin: number } }
 
-function mesPorDefecto() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-function rangoDeMes(mes: string) {
-  const [a, m] = mes.split('-').map(Number);
-  const desde = `${mes}-01`;
-  const ultimo = new Date(a!, m!, 0).getDate();
-  return { desde, hasta: `${mes}-${String(ultimo).padStart(2, '0')}` };
-}
 
 export function MisFichajes() {
-  const [mes, setMes] = useState(mesPorDefecto());
+  const [mes, setMes] = useState(mesActual());
   const [eventos, setEventos] = useState<Evento[] | null>(null);
   const [total, setTotal] = useState<Total | null>(null);
   const { desde, hasta } = rangoDeMes(mes);
 
   const cargar = useCallback(async () => {
     setEventos(null);
-    try { setEventos(await api.get<Evento[]>(`/horario/fichajes?desde=${desde}&hasta=${hasta}`)); } catch { setEventos([]); }
-    try { setTotal(await api.get<Total>(`/horario/totalizacion?desde=${desde}&hasta=${hasta}`)); } catch { setTotal(null); }
+    // Ambas peticiones en paralelo (antes encadenadas).
+    const [evs, tot] = await Promise.all([
+      api.get<Evento[]>(`/horario/fichajes?desde=${desde}&hasta=${hasta}`).catch(() => [] as Evento[]),
+      api.get<Total>(`/horario/totalizacion?desde=${desde}&hasta=${hasta}`).catch(() => null),
+    ]);
+    setEventos(evs); setTotal(tot);
   }, [desde, hasta]);
   useEffect(() => { void cargar(); }, [cargar]);
 
@@ -68,8 +63,7 @@ export function MisFichajes() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Mis fichajes</h1>
-      <p className="text-apagado mb-6">Registra tu jornada y consulta tu histórico.</p>
+      <CabeceraPagina titulo="Mis fichajes" descripcion="Registra tu jornada y consulta tu histórico." />
 
       <div className="mb-6">
         <Tarjeta titulo="Registrar jornada"><FicharWidget onFichado={cargar} /></Tarjeta>
@@ -98,12 +92,7 @@ export function MisFichajes() {
             ['Jornada teórica', minAHoras(total.totales.teoricoMin)],
             ['Saldo', minAHoras(total.totales.saldoMin)],
             ['Horas extra', minAHoras(total.totales.extrasMin)],
-          ].map(([t, v]) => (
-            <div key={t} className="bg-white rounded-xl2 border border-linea shadow-tarjeta p-4">
-              <div className="text-xs font-semibold text-apagado uppercase tracking-wide">{t}</div>
-              <div className="num text-2xl font-bold mt-2">{v}</div>
-            </div>
-          ))}
+          ].map(([t, v]) => <Kpi key={t} etiqueta={t!} valor={v!} />)}
         </section>
       )}
 

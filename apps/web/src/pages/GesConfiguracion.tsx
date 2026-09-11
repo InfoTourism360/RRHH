@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api';
 import {
-  Alerta, Boton, Campo, Cargando, Etiqueta, Modal, Selector, Tabla, Tarjeta, type Columna,
+  Alerta, Boton, Campo, Cargando, Etiqueta, Modal, Selector, Tabla, Tarjeta,
+  CabeceraPagina, BarraSaldo, type Columna,
 } from '../ui';
 
 interface Tipo {
@@ -24,11 +25,10 @@ export function GesConfiguracion() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('reglas');
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Configuración</h1>
-      <p className="text-apagado mb-5">
-        Reglas de ausencias, calendario laboral y saldos. Se configuran <strong>sin tocar código</strong>:
-        cada entidad adapta el catálogo a su acuerdo o convenio.
-      </p>
+      <CabeceraPagina
+        titulo="Configuración"
+        descripcion={<>Reglas de ausencias, calendario laboral y saldos. Se configuran <strong>sin tocar código</strong>: cada entidad adapta el catálogo a su acuerdo o convenio.</>}
+      />
 
       <div role="tablist" aria-label="Secciones de configuración" className="flex flex-wrap gap-1 mb-5 border-b border-linea">
         {TABS.map(([k, t]) => (
@@ -296,20 +296,10 @@ function SecSaldos() {
         <Tarjeta titulo={`Saldos ${anio} de la persona seleccionada`}>
           {saldos.length === 0 ? <p className="text-apagado">Sin saldos asignados.</p> : (
             <ul className="space-y-4">
-              {saldos.map((s) => {
-                const pct = s.asignado > 0 ? Math.round((s.consumido / s.asignado) * 100) : 0;
-                return (
-                  <li key={s.tipo}>
-                    <div className="flex justify-between items-baseline mb-1.5">
-                      <span className="font-semibold text-sm">{s.denominacion}</span>
-                      <span className="num text-sm"><strong>{s.disponible}</strong> <span className="text-apagado">/ {s.asignado}</span></span>
-                    </div>
-                    <div className="h-2 rounded-full bg-lienzo border border-linea overflow-hidden">
-                      <div className="h-full bg-marca-500" style={{ width: `${pct}%` }} />
-                    </div>
-                  </li>
-                );
-              })}
+              {saldos.map((s) => (
+                <BarraSaldo key={s.tipo} denominacion={s.denominacion}
+                  asignado={s.asignado} consumido={s.consumido} disponible={s.disponible} />
+              ))}
             </ul>
           )}
         </Tarjeta>

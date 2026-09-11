@@ -13,9 +13,12 @@ export default {
           50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
           400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3',
         },
-        tinta: '#0f172a',
-        apagado: '#64748b',
-        tenue: '#94a3b8',
+        // Contraste verificado sobre `lienzo` (#f6f7fb): todos >= 4.5:1 (WCAG 2.1 AA).
+        // No aclarar estos tonos sin recalcular el contraste: la conformidad AA
+        // es obligatoria (RD 1112/2018).
+        tinta: '#0f172a',   // 16.7:1
+        apagado: '#556173', //  5.9:1
+        tenue: '#5d6b80',   //  5.1:1
         linea: '#e2e8f0',
         lienzo: '#f6f7fb',
         exito: '#15803d',

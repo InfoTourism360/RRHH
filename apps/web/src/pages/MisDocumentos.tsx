@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, descargar, ApiError } from '../api';
-import { Alerta, Boton, Cargando, Etiqueta, Tarjeta } from '../ui';
+import { Alerta, Boton, Cargando, Etiqueta, Tarjeta, CabeceraPagina } from '../ui';
 
 interface Doc {
   id: string; tipo: string; titulo: string; nombre_fichero: string;
@@ -29,8 +29,7 @@ export function MisDocumentos() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Mis documentos</h1>
-      <p className="text-apagado mb-6">Documentación personal publicada por Recursos Humanos.</p>
+      <CabeceraPagina titulo="Mis documentos" descripcion="Documentación personal publicada por Recursos Humanos." />
       {error && <div className="mb-4"><Alerta tipo="error">{error}</Alerta></div>}
 
       <Tarjeta

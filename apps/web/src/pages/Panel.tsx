@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Cargando, Tarjeta } from '../ui';
+import { Cargando, Tarjeta, Kpi, CabeceraPagina } from '../ui';
 import { BarrasVertical, BarrasHorizontal, Donut, Gauge } from '../charts';
 
 interface KV { k: string; v: number }
@@ -18,19 +18,6 @@ const SITUACION: Record<string, string> = {
   EXCEDENCIA_VOL: 'Excedencia voluntaria', EXCEDENCIA_CUID: 'Excedencia (cuidado familiar)', SUSP_FIRME: 'Suspensión firme',
 };
 
-function Kpi({ label, num, foot, tono }: { label: string; num: string; foot?: string; tono?: 'ok' | 'warn' }) {
-  const punto = tono === 'ok' ? 'bg-exito' : tono === 'warn' ? 'bg-aviso' : 'bg-marca-500';
-  return (
-    <div className="bg-white rounded-xl2 border border-linea shadow-tarjeta p-4">
-      <div className="flex items-center gap-2 text-xs font-semibold text-apagado uppercase tracking-wide">
-        <span className={`w-1.5 h-1.5 rounded-full ${punto}`} aria-hidden="true" />{label}
-      </div>
-      <div className="num text-[28px] leading-none font-bold mt-2.5">{num}</div>
-      {foot && <div className="text-xs text-tenue mt-1.5">{foot}</div>}
-    </div>
-  );
-}
-
 export function Panel() {
   const [p, setP] = useState<Panel | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,16 +29,15 @@ export function Panel() {
   const k = p.kpis;
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Cuadro de mando de personal</h1>
-      <p className="text-apagado mb-6">Plantilla, RPT, control horario y ausencias — datos en vivo de tu entidad.</p>
+      <CabeceraPagina titulo="Cuadro de mando de personal" descripcion="Plantilla, RPT, control horario y ausencias — datos en vivo de tu entidad." />
 
       <section aria-label="Indicadores clave" className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
-        <Kpi label="Efectivos en activo" num={String(k.efectivos)} foot="relación vigente" tono="ok" />
-        <Kpi label="Plantilla (plazas)" num={String(k.plazas)} foot="dotaciones" />
-        <Kpi label="Cobertura de la RPT" num={`${k.coberturaPct}%`} tono="ok" />
-        <Kpi label="Plazas vacantes" num={String(k.vacantes)} foot="por cubrir" tono="warn" />
-        <Kpi label="Temporalidad" num={`${String(k.temporalidadPct).replace('.', ',')}%`} tono="ok" />
-        <Kpi label="Ausencias por resolver" num={String(k.ausenciasPendientes)} foot="pendientes" tono={k.ausenciasPendientes ? 'warn' : 'ok'} />
+        <Kpi etiqueta="Efectivos en activo" valor={String(k.efectivos)} pie="relación vigente" tono="ok" />
+        <Kpi etiqueta="Plantilla (plazas)" valor={String(k.plazas)} pie="dotaciones" />
+        <Kpi etiqueta="Cobertura de la RPT" valor={`${k.coberturaPct}%`} tono="ok" />
+        <Kpi etiqueta="Plazas vacantes" valor={String(k.vacantes)} pie="por cubrir" tono="aviso" />
+        <Kpi etiqueta="Temporalidad" valor={`${String(k.temporalidadPct).replace('.', ',')}%`} tono="ok" />
+        <Kpi etiqueta="Ausencias por resolver" valor={String(k.ausenciasPendientes)} pie="pendientes" tono={k.ausenciasPendientes ? "aviso" : "ok"} />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">

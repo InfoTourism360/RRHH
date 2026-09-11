@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from './api';
 import { Alerta, Etiqueta } from './ui';
+import { hoyISO } from './fechas';
 
 export type TipoFichaje = 'ENTRADA' | 'SALIDA' | 'INICIO_PAUSA' | 'FIN_PAUSA';
 interface Evento { id: string; tipo: TipoFichaje; origen: string; momento_servidor: string; momento_cliente: string | null }
@@ -9,10 +10,6 @@ export const ETIQUETA_FICHAJE: Record<string, string> = {
   ENTRADA: 'Entrada', SALIDA: 'Salida', INICIO_PAUSA: 'Inicio de pausa', FIN_PAUSA: 'Fin de pausa',
 };
 
-function hoyISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 /** Deriva el estado de la jornada a partir del último movimiento del día. */
 function estadoDe(evs: Evento[]): { estado: 'FUERA' | 'DENTRO' | 'PAUSA'; ultimo: Evento | null } {

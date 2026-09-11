@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Cargando, Tarjeta, Etiqueta, fechaLarga } from '../ui';
+import { Cargando, Tarjeta, Etiqueta, fechaLarga, CabeceraPagina } from '../ui';
 
 interface Festivo { id: string; fecha: string; denominacion: string; ambito: string }
 interface Solicitud { id: string; tipo: string; fecha_inicio: string; fecha_fin: string; estado: string }
@@ -27,8 +27,7 @@ export function MiCalendario() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Mi calendario {anio}</h1>
-      <p className="text-apagado mb-6">Calendario laboral de la entidad y tus ausencias aprobadas.</p>
+      <CabeceraPagina titulo={`Mi calendario ${anio}`} descripcion="Calendario laboral de la entidad y tus ausencias aprobadas." />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Tarjeta titulo={`Festivos del año (${festivos?.length ?? 0})`}>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api, ApiError } from '../api';
-import { Alerta, Boton, Cargando, Tarjeta, Tabla, Modal, Campo, type Columna } from '../ui';
+import { Alerta, Boton, Cargando, Tarjeta, Tabla, Modal, Campo, type Columna, CabeceraPagina } from '../ui';
 
 interface Pendiente {
   id: string; persona_id: string; nombre: string; apellido1: string;
@@ -49,8 +49,7 @@ export function GesAusencias() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Aprobación de ausencias</h1>
-      <p className="text-apagado mb-6">Solicitudes pendientes de validación en tu ámbito.</p>
+      <CabeceraPagina titulo="Aprobación de ausencias" descripcion="Solicitudes pendientes de validación en tu ámbito." />
       {msg && <div className="mb-4"><Alerta tipo={msg.tipo}>{msg.texto}</Alerta></div>}
 
       <Tarjeta titulo="Pendientes">

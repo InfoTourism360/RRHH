@@ -1,7 +1,7 @@
 // Gráficas SVG ligeras (sin dependencias), accesibles con role/aria-label.
 const AZUL = '#4f46e5';
 const PALETA = ['#4f46e5', '#0ea5e9', '#f59e0b', '#8b5cf6', '#14b8a6', '#ec4899'];
-const REJILLA = '#eef1f6', EJE = '#94a3b8', TINTA = '#0f172a', PISTA = '#eef2ff';
+const REJILLA = '#eef1f6', EJE = '#5d6b80', TINTA = '#0f172a', PISTA = '#eef2ff';
 
 interface Dato { k: string; v: number }
 
@@ -29,7 +29,7 @@ export function BarrasVertical({ datos, etiqueta }: { datos: Dato[]; etiqueta: s
           <g key={d.k}>
             <rect x={x} y={y} width={w} height={h} rx="5" fill={AZUL} />
             <text x={x + w / 2} y={y - 6} fontSize="11.5" fill={TINTA} textAnchor="middle" fontFamily="monospace" fontWeight="600">{d.v}</text>
-            <text x={x + w / 2} y={H - 12} fontSize="12" fill="#64748b" textAnchor="middle">{d.k}</text>
+            <text x={x + w / 2} y={H - 12} fontSize="12" fill="#556173" textAnchor="middle">{d.k}</text>
           </g>
         );
       })}
@@ -47,7 +47,7 @@ export function BarrasHorizontal({ datos, etiqueta }: { datos: Dato[]; etiqueta:
         const y = padT + i * rowH, w = (d.v / max) * plotW;
         return (
           <g key={d.k}>
-            <text x={padL - 10} y={y + rowH / 2 + 4} fontSize="12" fill="#64748b" textAnchor="end">{d.k}</text>
+            <text x={padL - 10} y={y + rowH / 2 + 4} fontSize="12" fill="#556173" textAnchor="end">{d.k}</text>
             <rect x={padL} y={y + 5} width={plotW} height={rowH - 12} rx="5" fill={PISTA} />
             <rect x={padL} y={y + 5} width={Math.max(w, 2)} height={rowH - 12} rx="5" fill={AZUL} />
             <text x={padL + Math.max(w, 2) + 8} y={y + rowH / 2 + 4} fontSize="11.5" fill={TINTA} fontFamily="monospace" fontWeight="600">{d.v}</text>
@@ -83,7 +83,7 @@ export function Donut({ datos, etiqueta, centro }: { datos: Dato[]; etiqueta: st
         {datos.map((d, i) => (
           <li key={d.k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
             <span style={{ width: 12, height: 12, borderRadius: 3, background: PALETA[i % PALETA.length], flex: 'none' }} />
-            <span style={{ color: '#64748b' }}>{d.k}</span>
+            <span style={{ color: '#556173' }}>{d.k}</span>
             <b style={{ fontFamily: 'monospace' }}>{d.v}</b>
           </li>
         ))}

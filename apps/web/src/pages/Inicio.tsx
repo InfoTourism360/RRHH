@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { Cargando, Tarjeta, Alerta, Etiqueta, minAHoras } from '../ui';
+import { Cargando, Tarjeta, Alerta, Etiqueta, Kpi, minAHoras, CabeceraPagina } from '../ui';
 import { FicharWidget } from '../FicharWidget';
 
 interface SaldoDia { tipo: string; denominacion: string; disponible: number }
@@ -14,27 +14,19 @@ interface Panel {
 }
 interface Noti { id: string; tipo: string; mensaje: string; creado_en: string; leida_en: string | null }
 
-function Metrica({ etiqueta, valor, pie, tono }: { etiqueta: string; valor: string; pie?: string; tono?: 'ok' | 'warn' }) {
-  const punto = tono === 'ok' ? 'bg-exito' : tono === 'warn' ? 'bg-aviso' : 'bg-marca-500';
-  return (
-    <div className="bg-white rounded-xl2 border border-linea shadow-tarjeta p-4">
-      <div className="flex items-center gap-2 text-xs font-semibold text-apagado uppercase tracking-wide">
-        <span className={`w-1.5 h-1.5 rounded-full ${punto}`} aria-hidden="true" />{etiqueta}
-      </div>
-      <div className="num text-[28px] leading-none font-bold mt-2.5">{valor}</div>
-      {pie && <div className="text-xs text-tenue mt-1.5">{pie}</div>}
-    </div>
-  );
-}
-
 export function Inicio() {
   const [p, setP] = useState<Panel | null>(null);
   const [notis, setNotis] = useState<Noti[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    try { setP(await api.get<Panel>('/portal/inicio')); } catch { setError('No se pudo cargar el panel.'); }
-    try { setNotis(await api.get<Noti[]>('/horario/notificaciones')); } catch { /* opcional */ }
+    // En paralelo: antes eran dos round-trips encadenados para pintar el inicio.
+    const [panel, avisos] = await Promise.all([
+      api.get<Panel>('/portal/inicio').catch(() => null),
+      api.get<Noti[]>('/horario/notificaciones').catch(() => [] as Noti[]),
+    ]);
+    if (panel) setP(panel); else setError('No se pudo cargar el panel.');
+    setNotis(avisos);
   }, []);
   useEffect(() => { void cargar(); }, [cargar]);
 
@@ -44,8 +36,7 @@ export function Inicio() {
   if (p.sinFicha) {
     return (
       <div>
-        <h1 className="text-[26px] font-extrabold mb-1">Mi espacio</h1>
-        <p className="text-apagado mb-6">Autoservicio del empleado.</p>
+        <CabeceraPagina titulo="Mi espacio" descripcion="Autoservicio del empleado." />
         <Tarjeta titulo="Sin ficha de personal">
           <p className="text-apagado">
             Tu usuario no está vinculado a una ficha de personal, así que no puedes fichar ni solicitar
@@ -61,8 +52,7 @@ export function Inicio() {
 
   return (
     <div>
-      <h1 className="text-[26px] font-extrabold mb-1">Mi espacio</h1>
-      <p className="text-apagado mb-6">Tu jornada, tus ausencias y tus documentos.</p>
+      <CabeceraPagina titulo="Mi espacio" descripcion="Tu jornada, tus ausencias y tus documentos." />
 
       {sinLeer.length > 0 && (
         <div className="mb-6">
@@ -81,12 +71,12 @@ export function Inicio() {
       </div>
 
       <section aria-label="Mis indicadores" className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-6">
-        <Metrica etiqueta="Saldo horario del mes" valor={minAHoras(saldo)}
-                 pie="frente a la jornada teórica" tono={saldo >= 0 ? 'ok' : 'warn'} />
-        <Metrica etiqueta="Solicitudes pendientes" valor={String(p.solicitudesPendientes)}
-                 pie="en trámite" tono={p.solicitudesPendientes ? 'warn' : 'ok'} />
-        <Metrica etiqueta="Documentos" valor={String(p.documentos)} pie="disponibles" />
-        <Metrica etiqueta="Avisos sin leer" valor={String(sinLeer.length)} tono={sinLeer.length ? 'warn' : 'ok'} />
+        <Kpi etiqueta="Saldo horario del mes" valor={minAHoras(saldo)}
+                 pie="frente a la jornada teórica" tono={saldo >= 0 ? "ok" : "aviso"} />
+        <Kpi etiqueta="Solicitudes pendientes" valor={String(p.solicitudesPendientes)}
+                 pie="en trámite" tono={p.solicitudesPendientes ? "aviso" : "ok"} />
+        <Kpi etiqueta="Documentos" valor={String(p.documentos)} pie="disponibles" />
+        <Kpi etiqueta="Avisos sin leer" valor={String(sinLeer.length)} tono={sinLeer.length ? "aviso" : "ok"} />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">

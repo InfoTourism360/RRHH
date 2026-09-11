@@ -8,11 +8,26 @@ const { Pool } = pg;
 // string 'YYYY-MM-DD' para no arrastrar husos horarios en cómputos de jornada.
 pg.types.setTypeParser(1082, (v) => v); // date -> string
 
+// Tiempos de espera: sin ellos, una caída de la base de datos deja las
+// peticiones colgadas hasta que corta el proxy (se comprobó: 60 s y un 504 en
+// lugar de un fallo inmediato). Con esto, el error llega rápido y legible.
+const TIEMPOS = {
+  connectionTimeoutMillis: 5_000, // abrir conexión
+  idleTimeoutMillis: 30_000,      // devolver conexiones ociosas
+  query_timeout: 15_000,          // corte en cliente
+  statement_timeout: 15_000,      // corte en servidor
+};
+
 // Pool de la APLICACIÓN (rol NOBYPASSRLS). Todo el runtime pasa por aquí.
-export const appPool = new Pool({ connectionString: env.DATABASE_URL_APP, max: 10 });
+export const appPool = new Pool({ connectionString: env.DATABASE_URL_APP, max: 10, ...TIEMPOS });
 
 // Pool del PROPIETARIO. Solo migraciones y provisioning (alta de entidad).
-export const ownerPool = new Pool({ connectionString: env.DATABASE_URL_OWNER, max: 4 });
+export const ownerPool = new Pool({ connectionString: env.DATABASE_URL_OWNER, max: 4, ...TIEMPOS });
+
+// Un error del pool (p. ej. la BD se reinicia) no debe tumbar el proceso.
+for (const pool of [appPool, ownerPool]) {
+  pool.on('error', (e) => console.error('pool postgres:', e.message));
+}
 
 export interface Contexto {
   entidadId: string;

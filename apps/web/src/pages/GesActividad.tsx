@@ -28,7 +28,7 @@ export function GesActividad() {
 
   return (
     <div>
-      <CabeceraPagina titulo="Registro de actividad" descripcion="Trazas de acceso y acciones (ENS). Registro inmutable y separado del log funcional." />
+      <CabeceraPagina titulo="Registro de actividad" descripcion="Trazas de acceso y acciones. Registro inmutable y separado del log funcional." />
       <Tarjeta titulo="Últimas trazas">
         {!filas ? <Cargando /> : <Tabla columnas={cols} filas={filas} vacio="Sin actividad registrada." />}
       </Tarjeta>

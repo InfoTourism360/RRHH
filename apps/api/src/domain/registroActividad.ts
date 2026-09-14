@@ -42,11 +42,21 @@ export function listarActividad(ctx: Contexto, desde: string, hasta: string, lim
       [desde, hasta, limite])).rows);
 }
 
-/** Purga de retención (ENS): elimina trazas más antiguas que N días. Ejecutar por cron. */
+/**
+ * Purga de retención (ENS): borraría las trazas anteriores a N días.
+ *
+ * NO ESTÁ IMPLEMENTADA. `registro_actividad` es append-only por trigger, así que
+ * la purga exige o particionar por fecha y soltar particiones, o una excepción
+ * controlada a la inmutabilidad; ninguna de las dos está hecha todavía.
+ *
+ * Lanza en vez de devolver 0 a propósito: si alguien la engancha a un cron, es
+ * preferible que el cron falle a que la política de retención parezca cumplirse
+ * sin que se borre nada.
+ */
 export async function purgarActividad(diasRetencion: number): Promise<number> {
-  // Se ejecuta como propietario (excepción controlada a la inmutabilidad, para
-  // cumplir la política de retención). El trigger bloquea DELETE, así que la
-  // purga se hace por partición temporal en producción; aquí queda documentada.
   void diasRetencion;
-  return 0;
+  throw new Error(
+    'purgarActividad: la purga de retención no está implementada (registro_actividad es append-only). ' +
+    'Ver docs/cumplimiento/borrado-seguro.md.',
+  );
 }

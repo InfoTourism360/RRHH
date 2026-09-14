@@ -69,12 +69,17 @@ export function Panel() {
         <Tarjeta titulo="Niveles de complemento de destino">
           <BarrasVertical etiqueta="Niveles de complemento de destino" datos={p.porNivel} />
         </Tarjeta>
-        <Tarjeta titulo="Cumplimiento normativo">
+        <Tarjeta titulo="Medidas implantadas">
           <ul className="space-y-2 text-sm">
-            <li className="flex gap-2"><span className="text-exito font-bold">✓</span> Registro horario inmutable (append-only, correcciones trazadas, 4 años).</li>
-            <li className="flex gap-2"><span className="text-exito font-bold">✓</span> ENS categoría media: aislamiento por entidad, registro de actividad, copias.</li>
-            <li className="flex gap-2"><span className="text-exito font-bold">✓</span> RGPD: minimización y sin biometría.</li>
+            <li className="flex gap-2"><span className="text-exito font-bold">✓</span> Los fichajes no se editan ni se borran: corregir uno crea un evento nuevo que conserva el original.</li>
+            <li className="flex gap-2"><span className="text-exito font-bold">✓</span> Cada entidad queda aislada en la base de datos; una consulta no alcanza datos de otra.</li>
+            <li className="flex gap-2"><span className="text-exito font-bold">✓</span> El registro de actividad es independiente del funcional y tampoco admite borrado.</li>
+            <li className="flex gap-2"><span className="text-exito font-bold">✓</span> La identificación se hace con PIN: no se tratan datos biométricos.</li>
           </ul>
+          <p className="text-xs text-tenue mt-3 pt-3 border-t border-linea">
+            Son medidas del producto. La declaración de conformidad con el ENS y el cumplimiento del
+            RGPD corresponden a la entidad y dependen también del despliegue.
+          </p>
         </Tarjeta>
       </div>
     </div>

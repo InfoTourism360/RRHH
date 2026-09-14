@@ -51,7 +51,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <span className="grid place-items-center w-9 h-9 rounded-xl bg-white/15 text-white font-extrabold">GP</span>
         <div className="leading-tight">
           <div className="text-white font-bold">Gestión de Personal</div>
-          <div className="text-[11px] text-white/60 tracking-wide uppercase">Sector público</div>
+          <div className="text-[11px] text-white/75 tracking-wide uppercase">Sector público</div>
         </div>
         <button className="ml-auto lg:hidden text-white/80 hover:text-white w-11 h-11 grid place-items-center rounded-lg" onClick={() => setAbierto(false)}
                 aria-label="Cerrar menú"><IcoCerrar /></button>
@@ -79,7 +79,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </span>
           <div className="min-w-0">
             <div className="text-white text-sm font-medium truncate">{rolTxt}</div>
-            <div className="text-white/55 text-xs truncate">Sesión activa</div>
+            <div className="text-white/70 text-xs truncate">Sesión activa</div>
           </div>
         </div>
         <button onClick={() => void salir()}
@@ -127,7 +127,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </main>
 
         <footer className="px-4 lg:px-8 py-4 text-xs text-tenue flex flex-wrap gap-x-4 gap-y-1 justify-between border-t border-linea">
-          <span>Datos de demostración · Registro horario inmutable · ENS categoría media · RGPD</span>
+          <span>Datos de demostración · Registro horario inmutable · Sin datos biométricos</span>
           <a href="/accesibilidad" className="underline hover:text-marca-700">Declaración de accesibilidad</a>
         </footer>
       </div>

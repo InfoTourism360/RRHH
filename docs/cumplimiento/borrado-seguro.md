@@ -20,7 +20,11 @@ vencer la retención, no registro a registro.
 ## Métodos de borrado
 1. **Fin de retención de registros inmutables**: purga por **partición temporal**
    (se elimina la partición completa vencida), evitando el borrado fila a fila que
-   los triggers de inmutabilidad impiden. Ver `purgarActividad()` (documentada).
+   los triggers de inmutabilidad impiden.
+   > **Pendiente de implementar.** Las tablas no están particionadas y
+   > `purgarActividad()` lanza si se invoca. Mientras no se haga, las trazas se
+   > conservan indefinidamente: el plazo de la tabla de arriba es la política
+   > prevista, no lo que el sistema aplica hoy.
 2. **Datos operativos**: cierre de vigencia (`vigencia_hasta`) como baja lógica;
    la supresión física se ejecuta al vencer los plazos.
 3. **Copias de seguridad**: destrucción segura de soportes/ficheros al caducar,

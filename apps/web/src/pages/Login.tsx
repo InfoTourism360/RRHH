@@ -39,18 +39,18 @@ export function Login() {
           <span className="grid place-items-center w-11 h-11 rounded-xl bg-white/15 font-extrabold text-lg">GP</span>
           <div>
             <div className="font-bold text-lg leading-tight">Gestión de Personal</div>
-            <div className="text-xs text-white/60 uppercase tracking-wider">Sector público</div>
+            <div className="text-xs text-white/85 uppercase tracking-wider">Sector público</div>
           </div>
         </div>
         <div className="max-w-md">
           <h2 className="text-3xl font-extrabold leading-tight mb-4">La gestión de personal de tu entidad, en una sola plataforma.</h2>
           <ul className="space-y-2.5 text-white/85">
-            <li className="flex gap-2.5"><span aria-hidden="true">✓</span> Registro horario digital inmutable y conforme a norma.</li>
+            <li className="flex gap-2.5"><span aria-hidden="true">✓</span> Registro horario que no se edita ni se borra: cada corrección deja rastro.</li>
             <li className="flex gap-2.5"><span aria-hidden="true">✓</span> Plantilla, RPT y ausencias con trazabilidad completa.</li>
-            <li className="flex gap-2.5"><span aria-hidden="true">✓</span> Preparado para el ENS (categoría media) y el RGPD.</li>
+            <li className="flex gap-2.5"><span aria-hidden="true">✓</span> Datos de cada entidad aislados y sin tratamiento biométrico.</li>
           </ul>
         </div>
-        <p className="text-white/50 text-xs">Entorno de demostración · datos ficticios</p>
+        <p className="text-white/85 text-xs">Entorno de demostración · datos ficticios</p>
       </div>
 
       {/* Formulario */}
@@ -84,7 +84,7 @@ export function Login() {
                        inputMode="numeric" value={totp} onChange={(e) => setTotp(e.target.value)} />
               )}
               <button type="submit" disabled={enviando}
-                className="w-full inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold bg-marca-600 text-white hover:bg-marca-700 disabled:opacity-60 transition">
+                className="w-full inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold bg-marca-600 text-white hover:bg-marca-700 disabled:bg-linea disabled:text-apagado transition">
                 {enviando ? 'Entrando…' : 'Entrar'}
               </button>
             </form>

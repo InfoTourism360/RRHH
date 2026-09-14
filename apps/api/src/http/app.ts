@@ -5,7 +5,10 @@ import * as est from '../domain/estructura.js';
 import { ctxDe, requiereRol, requiereSesion, validar, registroActividad } from './middleware.js';
 import { listarActividad } from '../domain/registroActividad.js';
 import { panelDireccion } from '../domain/panel.js';
-import { appPool } from '../db/pool.js';
+import { consultarRPT, resumirRPT } from '../domain/rpt.js';
+import { rptCSV } from '../domain/export/rpt.js';
+import { hashInforme } from '../domain/export/informe.js';
+import { appPool, conTenant } from '../db/pool.js';
 import { rutasHorario } from './horario.js';
 import { rutasAusencias } from './ausencias.js';
 import { rutasPortal } from './portal.js';
@@ -22,6 +25,17 @@ const h =
     fn(req, res).catch(next);
 
 const GESTION = ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'];
+
+/** Filtros de la RPT tomados del query string (todos opcionales). */
+function filtrosDe(req: Request) {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const unidadId = String(req.query.unidadId ?? '');
+  return {
+    unidadId: uuid.test(unidadId) ? unidadId : undefined,
+    grupoCodigo: req.query.grupo ? String(req.query.grupo).slice(0, 10) : undefined,
+    soloVacantes: req.query.soloVacantes === 'true',
+  };
+}
 
 export function crearApp() {
   const app = express();
@@ -126,6 +140,29 @@ export function crearApp() {
 
   app.get('/estructura/auditoria/:tabla/:registroId', h(async (req, res) =>
     res.json(await est.historialAuditoria(ctxDe(req), String(req.params.tabla), String(req.params.registroId)))));
+
+  // ------------------------------- RPT -------------------------------------
+  // Solo gestión: la RPT publicada no lleva ocupantes, pero esta vista sí, y
+  // decir quién está en excedencia es un dato de salud por la puerta de atrás.
+  app.get('/estructura/rpt', requiereRol(...GESTION), h(async (req, res) => {
+    const filas = await consultarRPT(ctxDe(req), filtrosDe(req));
+    res.json({ filas, resumen: resumirRPT(filas) });
+  }));
+
+  app.get('/estructura/rpt.csv', requiereRol(...GESTION), h(async (req, res) => {
+    const ctx = ctxDe(req);
+    const filas = await consultarRPT(ctx, filtrosDe(req));
+    const ent = await conTenant(ctx, async (ej) =>
+      (await ej.query<{ nombre: string; cif: string }>(
+        'SELECT nombre, cif FROM entidad WHERE id = app_entidad_id()')).rows[0]);
+    const csv = rptCSV(filas, resumirRPT(filas), {
+      entidadNombre: ent?.nombre ?? '', entidadCif: ent?.cif ?? '', generadoEn: new Date(),
+    });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('X-Integridad-SHA256', hashInforme(csv));
+    res.setHeader('Content-Disposition', 'attachment; filename="rpt.csv"');
+    res.send(csv);
+  }));
 
   // -------------------------- CONTROL HORARIO ------------------------------
   app.use('/horario', rutasHorario());

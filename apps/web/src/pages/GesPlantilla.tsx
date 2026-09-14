@@ -23,14 +23,16 @@ function useLista<T = Fila>(ruta: string): [T[], () => Promise<void>, boolean] {
 
 const TABS = [
   ['personas', 'Personas'], ['unidades', 'Unidades'], ['plazas', 'Plazas'],
-  ['puestos', 'Puestos (RPT)'], ['relaciones', 'Ocupación'],
+  ['puestos', 'Puestos'], ['relaciones', 'Ocupación'],
 ] as const;
 
 export function GesPlantilla() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('personas');
   return (
     <div>
-      <CabeceraPagina titulo="Plantilla y RPT" descripcion="Estructura organizativa: personas, unidades, plazas, puestos y su ocupación." />
+      <CabeceraPagina
+        titulo="Plantilla"
+        descripcion="Estructura organizativa: personas, unidades, plazas, puestos y su ocupación. La RPT consolidada se consulta y exporta en su propia pantalla." />
 
       <div role="tablist" aria-label="Secciones de plantilla" className="flex flex-wrap gap-1 mb-5 border-b border-linea">
         {TABS.map(([k, t]) => (

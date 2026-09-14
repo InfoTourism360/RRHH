@@ -5,6 +5,7 @@ import { Cargando } from './ui';
 import { Login } from './pages/Login';
 import { Panel } from './pages/Panel';
 import { GesPlantilla } from './pages/GesPlantilla';
+import { GesRPT } from './pages/GesRPT';
 import { GesAusencias } from './pages/GesAusencias';
 import { GesDocumentos } from './pages/GesDocumentos';
 import { GesActividad } from './pages/GesActividad';
@@ -51,6 +52,7 @@ export function App() {
         <Route path="/" element={esGestion ? <Panel /> : <Inicio />} />
         <Route path="/panel" element={<Panel />} />
         {esGestion && <Route path="/plantilla" element={<GesPlantilla />} />}
+        {esGestion && <Route path="/rpt" element={<GesRPT />} />}
         {esGestion && <Route path="/control-horario" element={<GesHorario />} />}
         {esGestion && <Route path="/aprobaciones" element={<GesAusencias />} />}
         {esGestion && <Route path="/publicaciones" element={<GesDocumentos />} />}

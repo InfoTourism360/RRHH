@@ -27,3 +27,4 @@ export const IcoLlave = base('M15 7a4 4 0 1 1-3.9 5H8v3H5v3H2v-3l6.1-6.1A4 4 0 0
 export const IcoEntrar = base('M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4|M10 17l5-5-5-5|M15 12H3');
 export const IcoPausa = base('M10 9v6M14 9v6|M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z');
 export const IcoReanudar = base('M10 8.5l5.5 3.5-5.5 3.5z|M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z');
+export const IcoRPT = base('M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z|M4 9.5h16|M4 15h16|M10 9.5V20');

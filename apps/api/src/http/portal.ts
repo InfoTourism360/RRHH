@@ -2,7 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { conTenant } from '../db/pool.js';
 import * as doc from '../domain/documentos.js';
 import * as aus from '../domain/ausencias.js';
-import { totalizar } from '../domain/totalizacion.js';
+import { totalizar, jornadaDelDia } from '../domain/totalizacion.js';
 import { festivosEnRango } from '../domain/calendario.js';
 import { requiereRol, validar, ctxDe } from './middleware.js';
 import { publicarDocSchema } from '../validation/schemas.js';
@@ -48,6 +48,7 @@ export function rutasPortal(): Router {
       diasDisponibles: await aus.saldos(ctx, personaId, anio),
       solicitudesPendientes: misSol.filter((s) => s.estado === 'SOLICITADA').length,
       documentos: (await doc.listarDocumentos(ctx, personaId)).length,
+      jornadaHoy: await jornadaDelDia(ctx, personaId, hasta),
     });
   }));
 

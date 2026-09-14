@@ -71,6 +71,50 @@ function minutosTrabajados(eventos: EventoEfectivo[]): { presencia: number; paus
   return { presencia: Math.round(presencia), pausa: Math.round(pausa) };
 }
 
+export interface JornadaDelDia {
+  /** Minutos ya consolidados: tramos ENTRADA→SALIDA menos pausas cerradas. */
+  cerradoMin: number;
+  /** ENTRADA sin SALIDA, en ISO; el cliente cuenta desde aquí hasta ahora. */
+  abiertaDesde: string | null;
+  /** INICIO_PAUSA sin FIN_PAUSA, en ISO; ese tiempo no computa. */
+  pausaDesde: string | null;
+  teoricoMin: number;
+}
+
+/**
+ * Estado de la jornada de un día concreto, incluida la parte en curso. La
+ * totalización normal solo cuenta tramos cerrados, así que durante la mañana
+ * daría siempre cero: esto es lo que permite pintar el avance en tiempo real.
+ */
+export async function jornadaDelDia(ctx: Contexto, personaId: string, fecha: string): Promise<JornadaDelDia> {
+  return conTenant(ctx, async (ej: Ejecutor) => {
+    const pol = await leerPoliticas(ej, ctx.entidadId);
+    const r = await ej.query<EventoBruto>(
+      `SELECT id, persona_id, tipo, origen, momento_servidor, momento_cliente,
+              corrige_evento_id, accion_correccion
+         FROM fichaje_evento
+        WHERE persona_id = $1
+          AND momento_servidor >= $2::date AND momento_servidor < ($2::date + 1)
+        ORDER BY momento_servidor`,
+      [personaId, fecha],
+    );
+    let presencia = 0, pausa = 0;
+    let entrada: Date | null = null, iniPausa: Date | null = null;
+    for (const e of resolverEfectivos(r.rows)) {
+      if (e.tipo === 'ENTRADA') entrada = e.momento;
+      else if (e.tipo === 'SALIDA' && entrada) { presencia += (e.momento.getTime() - entrada.getTime()) / 60000; entrada = null; }
+      else if (e.tipo === 'INICIO_PAUSA') iniPausa = e.momento;
+      else if (e.tipo === 'FIN_PAUSA' && iniPausa) { pausa += (e.momento.getTime() - iniPausa.getTime()) / 60000; iniPausa = null; }
+    }
+    return {
+      cerradoMin: Math.round(presencia - pausa),
+      abiertaDesde: entrada?.toISOString() ?? null,
+      pausaDesde: iniPausa?.toISOString() ?? null,
+      teoricoMin: minutosTeoricos(pol, new Date(`${fecha}T00:00:00`)),
+    };
+  });
+}
+
 export interface DiaTotalizado {
   fecha: string;
   trabajadoMin: number;

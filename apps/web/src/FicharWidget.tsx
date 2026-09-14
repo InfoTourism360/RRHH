@@ -73,12 +73,12 @@ export function FicharWidget({ onFichado }: { onFichado?: () => void }) {
 
       <div className="flex flex-wrap gap-3" role="group" aria-label="Acciones de fichaje">
         <button onClick={() => fichar(principal)} disabled={enviando !== null}
-          className="inline-flex items-center justify-center rounded-lg px-6 py-3 text-base font-bold bg-marca-600 text-white hover:bg-marca-700 disabled:opacity-60 transition shadow-sm">
+          className="inline-flex items-center justify-center rounded-lg px-6 py-3 text-base font-bold bg-marca-600 text-white hover:bg-marca-700 disabled:bg-linea disabled:text-apagado disabled:shadow-none transition shadow-sm">
           {enviando === principal ? 'Registrando…' : ETIQUETA_FICHAJE[principal]}
         </button>
         {secundarias.map((t) => (
           <button key={t} onClick={() => fichar(t)} disabled={enviando !== null}
-            className="inline-flex items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold bg-white text-marca-700 border border-linea hover:border-marca-300 hover:bg-marca-50 disabled:opacity-60 transition">
+            className="inline-flex items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold bg-white text-marca-700 border border-linea hover:border-marca-300 hover:bg-marca-50 disabled:bg-linea disabled:text-apagado transition">
             {enviando === t ? 'Registrando…' : ETIQUETA_FICHAJE[t]}
           </button>
         ))}

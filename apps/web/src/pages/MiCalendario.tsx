@@ -70,7 +70,7 @@ export function MiCalendario() {
             ) : (
               <>
                 <p className="text-lg font-bold">{proximos[0]!.denominacion}</p>
-                <p className="text-apagado capitalize">{fechaLarga(proximos[0]!.fecha)}</p>
+                <p className="text-apagado first-letter:uppercase">{fechaLarga(proximos[0]!.fecha)}</p>
               </>
             )}
           </Tarjeta>

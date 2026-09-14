@@ -21,9 +21,12 @@ export default {
         tenue: '#5d6b80',   //  5.1:1
         linea: '#e2e8f0',
         lienzo: '#f6f7fb',
+        // Los tres semánticos se usan como texto sobre su propio fondo tintado
+        // (bg-green-50 / bg-amber-50 / bg-red-50), que es el peor caso y va por
+        // debajo de `lienzo`. Verificado ahí: exito 4.79, aviso 4.84, error 5.91.
         exito: '#15803d',
         aviso: '#b45309',
-        error: '#dc2626',
+        error: '#b91c1c',
       },
       boxShadow: {
         tarjeta: '0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.12)',

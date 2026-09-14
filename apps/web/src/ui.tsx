@@ -13,10 +13,11 @@ export function fechaLarga(iso: string): string {
   } catch { return iso; }
 }
 
-export function Alerta({ tipo, children }: { tipo: 'error' | 'exito' | 'info'; children: ReactNode }) {
+export function Alerta({ tipo, children }: { tipo: 'error' | 'exito' | 'aviso' | 'info'; children: ReactNode }) {
   const estilos = {
     error: 'bg-red-50 text-error border-error/30',
     exito: 'bg-green-50 text-exito border-exito/30',
+    aviso: 'bg-amber-50 text-aviso border-aviso/30',
     info: 'bg-marca-50 text-marca-700 border-marca-200',
   }[tipo];
   return (
@@ -71,8 +72,10 @@ export function Boton(
     secundario: 'bg-white text-marca-700 border border-linea hover:border-marca-300 hover:bg-marca-50',
     peligro: 'bg-error text-white hover:brightness-95',
   }[variante];
+  // El estado inactivo va en gris plano y no con opacidad: al desvanecer el
+  // botón entero, texto y fondo se aclaran juntos y el texto deja de leerse.
   return (
-    <button className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${estilos}`} {...props}>
+    <button className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:bg-linea disabled:text-apagado disabled:border-linea disabled:shadow-none ${estilos}`} {...props}>
       {children}
     </button>
   );
@@ -80,7 +83,7 @@ export function Boton(
 
 export function Tarjeta({ titulo, children, accion }: { titulo?: string; children: ReactNode; accion?: ReactNode }) {
   return (
-    <section className="bg-white rounded-xl2 shadow-tarjeta border border-linea p-5 sm:p-6">
+    <section className="bg-white rounded-xl2 shadow-tarjeta border border-linea p-5 sm:p-6 h-full">
       {titulo && (
         <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="text-base font-bold">{titulo}</h2>

@@ -49,12 +49,12 @@ npm run dev:api   # http://localhost:3001/salud
 npm run dev -w @rrhh/web   # http://localhost:5173 (proxy /api -> :3001)
 ```
 
-**Modo quiosco** (terminal compartido, sin sesión): `/quiosco`. Se identifica con correo y
+**Modo quiosco** (terminal compartido, sin sesión): `/quiosco`. Se identifica con DNI o identificador (o correo) y
 PIN — nunca con biometría. El PIN lo asigna el administrador desde *Accesos*.
 
 Logins de demo tras el seed (CIF `P4600001A`):
 - Administrador: `admin@demo.es` / `Demo1234!` (cuadro de mando + back-office)
-- Empleado (portal): `empleado@demo.es` / `Demo1234!` (PIN de quiosco `1234`)
+- Empleado (portal): `empleado@demo.es` / `Demo1234!` (Quiosco: DNI `00000001R` o `empleado@demo.es`, PIN `1234`)
 
 ## Qué puede hacer cada rol
 

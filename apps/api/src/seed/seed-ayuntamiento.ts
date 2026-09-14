@@ -278,7 +278,7 @@ async function main() {
   console.log('Seed completado:', {
     entidad: 'Entidad de demostración', cif: CIF,
     adminLogin: 'admin@demo.es / Demo1234!',
-    empleadoLogin: 'empleado@demo.es / Demo1234! (PIN quiosco 1234)',
+    empleadoLogin: 'empleado@demo.es / Demo1234! (Quiosco: DNI 00000001R, PIN 1234)',
     ...resumen,
   });
 }

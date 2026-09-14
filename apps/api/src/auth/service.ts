@@ -112,21 +112,42 @@ export async function login(params: {
   };
 }
 
-/** Autenticación de QUIOSCO: identificación por credencial + PIN (nunca biometría). */
+/** Autenticación de QUIOSCO: identificación por DNI / identificador / correo + PIN (nunca biometría). */
 export async function autenticarQuiosco(params: {
   cif: string;
-  email: string;
+  identificador?: string;
+  dni?: string;
+  email?: string;
   pin: string;
 }): Promise<{ entidadId: string; usuarioId: string; personaId: string }> {
+  const valor = (params.identificador ?? params.dni ?? params.email ?? '').trim();
+  if (!valor) throw new ErrorAuth('CREDENCIALES', 'Identificador no proporcionado.');
+
   const ent = await ownerPool.query<{ id: string }>(
     'SELECT id FROM entidad WHERE cif = $1 AND activo',
     [params.cif],
   );
   const entidadId = ent.rows[0]?.id;
   if (!entidadId) throw new ErrorAuth('CREDENCIALES', 'Credenciales de quiosco inválidas.');
-  const u = await ownerPool.query<{ id: string; pin_hash: string | null; persona_id: string | null; activo: boolean }>(
-    'SELECT id, pin_hash, persona_id, activo FROM usuario WHERE entidad_id = $1 AND email = $2',
-    [entidadId, params.email],
+
+  // Búsqueda flexible: coincide con email del usuario o con el DNI/NIE de la persona asociada.
+  const u = await ownerPool.query<{
+    id: string;
+    pin_hash: string | null;
+    persona_id: string | null;
+    activo: boolean;
+  }>(
+    `SELECT u.id, u.pin_hash, u.persona_id, u.activo
+       FROM usuario u
+  LEFT JOIN persona p ON p.id = u.persona_id
+      WHERE u.entidad_id = $1
+        AND (
+          u.email = $2
+          OR p.num_documento = $2
+          OR regexp_replace(p.num_documento, '[^a-zA-Z0-9]', '', 'g')::citext = regexp_replace($2, '[^a-zA-Z0-9]', '', 'g')::citext
+        )
+      LIMIT 1`,
+    [entidadId, valor],
   );
   const usuario = u.rows[0];
   if (!usuario || !usuario.activo || !usuario.pin_hash || !usuario.persona_id) {

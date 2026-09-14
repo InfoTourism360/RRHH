@@ -70,8 +70,8 @@ export function rutasHorario(): Router {
   r.post('/quiosco/fichar',
     limitarPorOrigen({ nombre: 'quiosco', ventanaMs: 60_000, maximo: 30 }),
     validar(quioscoFicharSchema), h(async (req, res) => {
-    const { cif, email, pin, ...ficha } = req.body;
-    const q = await autenticarQuiosco({ cif, email, pin });
+    const { cif, identificador, email, dni, pin, ...ficha } = req.body;
+    const q = await autenticarQuiosco({ cif, identificador, email, dni, pin });
     const ev = await fichar({ entidadId: q.entidadId, usuarioId: q.usuarioId }, {
       personaId: q.personaId, tipo: ficha.tipo, origen: 'QUIOSCO',
       momentoCliente: ficha.momentoCliente ?? null, geo: ficha.geo ?? null,

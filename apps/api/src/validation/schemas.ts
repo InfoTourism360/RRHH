@@ -93,8 +93,16 @@ export const ficharSchema = z
   .strict();
 
 export const quioscoFicharSchema = ficharSchema
-  .extend({ cif: z.string().min(1), email: z.string().email(), pin: z.string().regex(/^\d{4,8}$/) })
-  .strict();
+  .extend({
+    cif: z.string().min(1),
+    identificador: z.string().min(1).optional(),
+    dni: z.string().min(1).optional(),
+    email: z.string().optional(),
+    pin: z.string().regex(/^\d{4,8}$/),
+  })
+  .refine((d) => Boolean((d.identificador && d.identificador.trim()) || (d.dni && d.dni.trim()) || (d.email && d.email.trim())), {
+    message: 'Debe indicar DNI, identificador o correo electrónico.',
+  });
 
 export const correccionSchema = z
   .object({

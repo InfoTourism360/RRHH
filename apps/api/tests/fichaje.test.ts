@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { conTenant } from '../src/db/pool.js';
+import { conTenant, ownerPool } from '../src/db/pool.js';
+import { autenticarQuiosco, establecerPin } from '../src/auth/service.js';
+import { hashearPassword } from '../src/auth/passwords.js';
 import * as est from '../src/domain/estructura.js';
 import {
   fichar, corregirFichaje, listarFichajes, notificacionesDe,
@@ -125,5 +127,38 @@ describe('Control horario', () => {
         await ej.query(`DELETE FROM fichaje_evento WHERE persona_id = $1`, [p.id]);
       }),
     ).rejects.toThrow(/append-only|permission denied/i);
+  });
+
+  it('autentica en quiosco por DNI o por email indistintamente', async () => {
+    const a = await crearEntidadDemo('QUIOS');
+    const p = await personaEn(a.entidadId, '44556677Z');
+    const hash = await hashearPassword('Clave1234!');
+    const u = await ownerPool.query<{ id: string }>(
+      `INSERT INTO usuario (entidad_id, persona_id, email, password_hash)
+       VALUES ($1, $2, 'quiosco.test@demo.es', $3) RETURNING id`,
+      [a.entidadId, p.id, hash],
+    );
+    await establecerPin(u.rows[0]!.id, '4321');
+
+    // 1) Autenticación por DNI exacto
+    const q1 = await autenticarQuiosco({ cif: a.cif, identificador: '44556677Z', pin: '4321' });
+    expect(q1.usuarioId).toBe(u.rows[0]!.id);
+    expect(q1.personaId).toBe(p.id);
+
+    // 2) Autenticación por DNI con guión o minúsculas
+    const q2 = await autenticarQuiosco({ cif: a.cif, identificador: '44556677-z', pin: '4321' });
+    expect(q2.usuarioId).toBe(u.rows[0]!.id);
+
+    // 3) Autenticación por correo
+    const q3 = await autenticarQuiosco({ cif: a.cif, identificador: 'quiosco.test@demo.es', pin: '4321' });
+    expect(q3.usuarioId).toBe(u.rows[0]!.id);
+
+    // 4) PIN incorrecto falla
+    await expect(autenticarQuiosco({ cif: a.cif, identificador: '44556677Z', pin: '9999' }))
+      .rejects.toMatchObject({ codigo: 'CREDENCIALES' });
+
+    // 5) DNI inexistente falla
+    await expect(autenticarQuiosco({ cif: a.cif, identificador: '99999999R', pin: '4321' }))
+      .rejects.toMatchObject({ codigo: 'CREDENCIALES' });
   });
 });

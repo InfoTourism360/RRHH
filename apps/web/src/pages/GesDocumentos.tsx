@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, type FormEvent } from 'react';
-import { api, ApiError } from '../api';
+import { api, descargar, ApiError } from '../api';
 import { Alerta, Boton, Campo, Selector, Tarjeta, Tabla, type Columna, CabeceraPagina, Cargando } from '../ui';
 import { TIPOS_DOC, etiqueta } from '../catalogos';
 
@@ -22,7 +22,7 @@ export function GesDocumentos() {
   const [tipo, setTipo] = useState('NOMINA');
   const [titulo, setTitulo] = useState('');
   const [fichero, setFichero] = useState<File | null>(null);
-  const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
+  const [msg, setMsg] = useState<{ tipo: 'exito' | 'error' | 'aviso'; texto: string } | null>(null);
 
   useEffect(() => { api.get<Persona[]>('/estructura/personas').then((p) => { setPersonas(p); if (p[0]) setPersonaId(p[0].id); }).catch(() => {}); }, []);
 
@@ -52,16 +52,53 @@ export function GesDocumentos() {
     }
   }
 
+  async function generarNominaEjemplo() {
+    if (!personaId) return;
+    setMsg(null);
+    try {
+      await api.post('/portal/documentos/generar-nomina', { personaId });
+      setMsg({
+        tipo: 'aviso',
+        texto: 'Nómina de ejemplo publicada. Lleva los datos de la persona, pero los importes son ficticios '
+             + 'y el PDF sale marcado como tal: no la entregues como recibo de salarios.',
+      });
+      await cargarDocs();
+    } catch (err) {
+      setMsg({ tipo: 'error', texto: err instanceof ApiError ? err.message : 'No se pudo generar la nómina.' });
+    }
+  }
+
+  async function bajarDoc(d: Doc) {
+    setMsg(null);
+    try {
+      await descargar(`/portal/admin/documentos/${d.id}/descargar`, d.nombre_fichero);
+    } catch (err) {
+      setMsg({ tipo: 'error', texto: err instanceof ApiError ? err.message : 'No se pudo descargar el documento.' });
+    }
+  }
+
   const cols: Columna<Doc>[] = [
     { k: 'titulo', txt: 'Título' },
     { k: 'tipo', txt: 'Tipo', render: (d) => etiqueta(TIPOS_DOC, d.tipo) },
     { k: 'publicado_en', txt: 'Publicado', render: (d) => new Date(d.publicado_en).toLocaleDateString('es-ES') },
     { k: 'acuse', txt: 'Acuse de descarga', render: (d) => d.ultima_descarga ? `Descargado ${new Date(d.ultima_descarga).toLocaleDateString('es-ES')}` : 'Pendiente' },
+    {
+      k: 'acciones',
+      txt: 'Acciones',
+      render: (d) => (
+        <Boton variante="secundario" onClick={() => bajarDoc(d)}>
+          Descargar
+        </Boton>
+      ),
+    },
   ];
 
   return (
     <div>
-      <CabeceraPagina titulo="Documentos del personal" descripcion="Publica documentación personal (incluidas nóminas en PDF). Cada descarga deja acuse." />
+      <CabeceraPagina
+        titulo="Documentos del personal"
+        descripcion="Publica documentación personal en PDF. Cada descarga deja acuse de recepción."
+      />
       {msg && <div className="mb-4"><Alerta tipo={msg.tipo}>{msg.texto}</Alerta></div>}
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -82,7 +119,17 @@ export function GesDocumentos() {
                      onChange={(e) => setFichero(e.target.files?.[0] ?? null)}
                      className="block w-full text-sm text-apagado file:mr-3 file:rounded-lg file:border-0 file:bg-marca-50 file:text-marca-700 file:px-4 file:py-2 file:font-semibold" />
             </div>
-            <Boton type="submit">Publicar</Boton>
+            <div className="flex flex-wrap items-center gap-3">
+              <Boton type="submit">Publicar fichero</Boton>
+              <Boton type="button" variante="secundario" onClick={generarNominaEjemplo}>
+                Generar nómina de ejemplo (PDF)
+              </Boton>
+            </div>
+            <p className="text-xs text-tenue mt-3">
+              La nómina de ejemplo usa los datos reales de la persona, pero no calcula importes:
+              los devengos y las deducciones son ficticios y el PDF sale marcado con esa advertencia.
+              Sirve para ver el formato, no para entregarla.
+            </p>
           </form>
         </Tarjeta>
 

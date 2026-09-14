@@ -4,8 +4,10 @@ import * as doc from '../domain/documentos.js';
 import * as aus from '../domain/ausencias.js';
 import { totalizar, jornadaDelDia } from '../domain/totalizacion.js';
 import { festivosEnRango } from '../domain/calendario.js';
+import { ErrorDominio } from '../domain/estructura.js';
 import { requiereRol, validar, ctxDe } from './middleware.js';
 import { publicarDocSchema } from '../validation/schemas.js';
+import { generarNominaPDF, generarNominaParaPersona } from '../domain/export/nomina.js';
 
 const h =
   (fn: (req: Request, res: Response) => Promise<unknown>) =>
@@ -99,6 +101,54 @@ export function rutasPortal(): Router {
   // Listado de documentos de una persona concreta (gestión).
   r.get('/admin/documentos', requiereRol(...GESTION), h(async (req, res) =>
     res.json(await doc.listarDocumentos(ctxDe(req), String(req.query.personaId)))));
+
+  // Descarga para gestor (auditoría / consulta).
+  r.get('/admin/documentos/:id/descargar', requiereRol(...GESTION), h(async (req, res) => {
+    const d = await conTenant(ctxDe(req), async (ej) => {
+      const resp = await ej.query<{ nombre_fichero: string; mime: string; contenido: Buffer; sha256: string }>(
+        'SELECT nombre_fichero, mime, contenido, sha256 FROM documento_personal WHERE id = $1',
+        [req.params.id],
+      );
+      if (!resp.rows[0]) throw new ErrorDominio('NO_ENCONTRADO', 'Documento no encontrado.');
+      return resp.rows[0];
+    });
+    res.setHeader('Content-Type', d.mime);
+    res.setHeader('X-Integridad-SHA256', d.sha256);
+    res.setHeader('Content-Disposition', `attachment; filename="${d.nombre_fichero}"`);
+    res.send(d.contenido);
+  }));
+
+  // Modelo de recibo de salarios en PDF, con importes de ejemplo y marcado como
+  // tal (cualquier usuario autenticado). Sirve para ver el formato.
+  r.get('/documentos/nomina-ejemplo/modelo', h(async (_req, res) => {
+    const pdf = await generarNominaPDF();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="modelo_recibo_salarios_ejemplo.pdf"');
+    res.send(pdf);
+  }));
+
+  // Genera y publica una nómina para un empleado (gestión). Ojo: los importes no
+  // se calculan; si no se aportan, el PDF sale con cifras ficticias y así marcado.
+  r.post('/documentos/generar-nomina', requiereRol(...GESTION), h(async (req, res) => {
+    const personaId = String(req.body?.personaId);
+    if (!personaId) {
+      return res.status(400).json({ error: 'Falta personaId' });
+    }
+    const ctx = ctxDe(req);
+    const { buffer, nombreFichero, titulo } = await generarNominaParaPersona(ctx, personaId, {
+      mes: req.body?.mes,
+      anio: req.body?.anio ? Number(req.body.anio) : undefined,
+    });
+    const publicado = await doc.publicarDocumento(ctx, {
+      personaId,
+      tipo: 'NOMINA',
+      titulo,
+      nombreFichero,
+      mime: 'application/pdf',
+      contenido: buffer,
+    });
+    res.status(201).json(publicado);
+  }));
 
   return r;
 }

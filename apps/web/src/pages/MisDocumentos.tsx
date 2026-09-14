@@ -25,11 +25,25 @@ export function MisDocumentos() {
     catch (err) { setError(err instanceof ApiError ? err.message : 'No se pudo descargar.'); }
   }
 
+  async function bajarModeloEjemplo() {
+    setError(null);
+    try { await descargar('/portal/documentos/nomina-ejemplo/modelo', 'modelo_recibo_salarios_ejemplo.pdf'); }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'No se pudo descargar el modelo.'); }
+  }
+
   const pendientes = (docs ?? []).filter((d) => !d.ultima_descarga).length;
 
   return (
     <div>
-      <CabeceraPagina titulo="Mis documentos" descripcion="Documentación personal publicada por Recursos Humanos." />
+      <CabeceraPagina
+        titulo="Mis documentos"
+        descripcion="Documentación personal publicada por Recursos Humanos (nóminas, certificados)."
+        accion={
+          <Boton variante="secundario" onClick={bajarModeloEjemplo}>
+            Ver modelo de recibo de salarios (ejemplo)
+          </Boton>
+        }
+      />
       {error && <div className="mb-4"><Alerta tipo="error">{error}</Alerta></div>}
 
       <Tarjeta

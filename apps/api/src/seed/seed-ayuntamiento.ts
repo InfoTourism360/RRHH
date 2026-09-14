@@ -5,6 +5,7 @@ import { publicarDocumento } from '../domain/documentos.js';
 import { crearFestivo } from '../domain/calendario.js';
 import { establecerPin } from '../auth/service.js';
 import { hashearPassword } from '../auth/passwords.js';
+import { generarNominaPDF } from '../domain/export/nomina.js';
 
 // -----------------------------------------------------------------------------
 // SEED de datos realista (NO datos de producción; script de arranque de demo).
@@ -239,12 +240,13 @@ async function main() {
   );
   await establecerPin(ue.rows[0]!.id, '1234'); // PIN de quiosco de demo
 
-  // Documento de demo (recibo de nómina en PDF mínimo) para ese empleado.
-  const pdfDemo = Buffer.from(
-    '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF Recibo de nomina de demostracion', 'latin1');
+  // Documento de demo: recibo de salarios con el formato real pero importes
+  // ficticios (el propio PDF sale marcado como tal).
+  const pdfDemo = await generarNominaPDF();
   await publicarDocumento(ctx, {
-    personaId: empleado.personaId, tipo: 'NOMINA', titulo: 'Nómina de demostración',
-    nombreFichero: 'nomina_demo.pdf', contenido: pdfDemo,
+    personaId: empleado.personaId, tipo: 'NOMINA',
+    titulo: 'Nómina de demostración (importes ficticios)',
+    nombreFichero: 'nomina_demostracion.pdf', contenido: pdfDemo,
   });
 
   // Solicitudes de ausencia de ejemplo: varias pendientes de aprobación y una aprobada.

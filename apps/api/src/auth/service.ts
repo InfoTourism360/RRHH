@@ -136,8 +136,11 @@ export async function autenticarQuiosco(params: {
     pin_hash: string | null;
     persona_id: string | null;
     activo: boolean;
+    pin_intentos_fallidos: number;
+    pin_bloqueado_hasta: Date | null;
   }>(
-    `SELECT u.id, u.pin_hash, u.persona_id, u.activo
+    `SELECT u.id, u.pin_hash, u.persona_id, u.activo,
+            u.pin_intentos_fallidos, u.pin_bloqueado_hasta
        FROM usuario u
   LEFT JOIN persona p ON p.id = u.persona_id
       WHERE u.entidad_id = $1
@@ -153,18 +156,60 @@ export async function autenticarQuiosco(params: {
   if (!usuario || !usuario.activo || !usuario.pin_hash || !usuario.persona_id) {
     throw new ErrorAuth('CREDENCIALES', 'Credenciales de quiosco inválidas.');
   }
+
+  // Se dice abiertamente que está bloqueado, y no un error genérico: quien
+  // tiene que fichar está delante del terminal y necesita saber que la salida
+  // es esperar o entrar por la web. Lo que se revela —que ese documento
+  // corresponde a alguien de la plantilla— ya lo saben sus compañeros.
+  if (usuario.pin_bloqueado_hasta && usuario.pin_bloqueado_hasta > new Date()) {
+    throw new ErrorAuth(
+      'BLOQUEADO',
+      'PIN bloqueado temporalmente por intentos fallidos. Ficha desde la web con tu contraseña.',
+    );
+  }
+
   if (!(await verificarPassword(usuario.pin_hash, params.pin))) {
+    await registrarFalloPin(usuario.id, usuario.pin_intentos_fallidos);
     throw new ErrorAuth('CREDENCIALES', 'Credenciales de quiosco inválidas.');
+  }
+
+  if (usuario.pin_intentos_fallidos > 0) {
+    await ownerPool.query(
+      'UPDATE usuario SET pin_intentos_fallidos = 0, pin_bloqueado_hasta = NULL WHERE id = $1',
+      [usuario.id],
+    );
   }
   return { entidadId, usuarioId: usuario.id, personaId: usuario.persona_id };
 }
 
+/**
+ * Cuenta el fallo del PIN y bloquea el quiosco al llegar al tope. Es un
+ * contador propio: no toca `intentos_fallidos`, para que nadie pueda dejar a
+ * un compañero sin acceso web probando PIN en el terminal.
+ */
+async function registrarFalloPin(usuarioId: string, intentosPrevios: number): Promise<void> {
+  const intentos = intentosPrevios + 1;
+  const bloquear = intentos >= env.MAX_INTENTOS_PIN;
+  await ownerPool.query(
+    `UPDATE usuario
+        SET pin_intentos_fallidos = $2,
+            pin_bloqueado_hasta = CASE WHEN $3 THEN now() + ($4 || ' minutes')::interval
+                                       ELSE pin_bloqueado_hasta END
+      WHERE id = $1`,
+    [usuarioId, intentos, bloquear, String(env.BLOQUEO_PIN_MINUTOS)],
+  );
+}
+
 /** Establece/actualiza el PIN de quiosco del usuario (hash Argon2id). */
 export async function establecerPin(usuarioId: string, pin: string): Promise<void> {
-  await ownerPool.query('UPDATE usuario SET pin_hash = $2 WHERE id = $1', [
-    usuarioId,
-    await hashearPassword(pin),
-  ]);
+  // Cambiar el PIN levanta el bloqueo: es la vía de la que dispone el
+  // administrador para desatascar a quien se ha quedado fuera del quiosco.
+  await ownerPool.query(
+    `UPDATE usuario
+        SET pin_hash = $2, pin_intentos_fallidos = 0, pin_bloqueado_hasta = NULL
+      WHERE id = $1`,
+    [usuarioId, await hashearPassword(pin)],
+  );
 }
 
 async function registrarFallo(usuarioId: string, intentosPrevios: number): Promise<void> {

@@ -15,6 +15,10 @@ const schema = z.object({
   SESSION_INACTIVIDAD_MINUTOS: z.coerce.number().int().positive().default(30),
   MAX_INTENTOS_LOGIN: z.coerce.number().int().positive().default(5),
   BLOQUEO_MINUTOS: z.coerce.number().int().positive().default(15),
+  // El PIN de quiosco se bloquea aparte y más corto: quien está delante del
+  // terminal necesita fichar, y siempre le queda el acceso web con contraseña.
+  MAX_INTENTOS_PIN: z.coerce.number().int().positive().default(5),
+  BLOQUEO_PIN_MINUTOS: z.coerce.number().int().positive().default(5),
   APP_ENCRYPTION_KEY: z.string().min(1),
   // Rotula la interfaz como entorno de demostración con datos ficticios.
   // Apagado por defecto: en el despliegue de una entidad real no debe salir.

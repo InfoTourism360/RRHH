@@ -3,6 +3,9 @@ import * as aus from '../domain/ausencias.js';
 import { listarFestivos, crearFestivo } from '../domain/calendario.js';
 import { requiereRol, validar, ctxDe } from './middleware.js';
 import {
+  alcanceDe, unidadesDelAlcance, exigirMandoSobrePersona, exigirMandoSobreUnidad,
+} from './alcance.js';
+import {
   solicitudSchema, denegarSchema, festivoSchema, tipoAusenciaUpdateSchema, asignarSaldoSchema,
 } from '../validation/schemas.js';
 
@@ -19,11 +22,15 @@ function personaPropia(req: Request): string {
   if (!p) throw Object.assign(new Error('El usuario no tiene ficha de persona asociada.'), { status: 400 });
   return p;
 }
-function unidadResponsable(req: Request): string | null {
-  // ADMIN/GESTOR ven todas (null); un responsable solo su(s) unidad(es).
-  if (req.sesion?.roles.some((r) => GESTION.includes(r.rol))) return null;
-  const ru = req.sesion?.roles.find((r) => r.rol === 'RESPONSABLE_UNIDAD' && r.unidadId);
-  return ru?.unidadId ?? null;
+/**
+ * Unidades sobre las que este usuario resuelve ausencias.
+ * `null` = toda la entidad (administración y gestión de personal).
+ * Lista vacía = ninguna: un responsable sin unidad asignada no resuelve nada.
+ */
+async function unidadesQueResuelve(req: Request): Promise<string[] | null> {
+  const alcance = alcanceDe(req);
+  if (alcance.tipo === 'ENTIDAD') return null;
+  return unidadesDelAlcance(req, alcance);
 }
 
 export function rutasAusencias(): Router {
@@ -44,8 +51,10 @@ export function rutasAusencias(): Router {
 
   // Saldos.
   r.get('/saldos', h(async (req, res) => {
-    const personaId = (req.query.personaId as string) && req.sesion?.roles.some((x) => APRUEBAN.includes(x.rol))
-      ? (req.query.personaId as string) : personaPropia(req);
+    const pedida = (req.query.personaId as string | undefined) || undefined;
+    // El saldo de un tercero solo lo ve quien tiene competencia sobre él.
+    if (pedida) await exigirMandoSobrePersona(req, pedida);
+    const personaId = pedida ?? personaPropia(req);
     res.json(await aus.saldos(ctxDe(req), personaId, Number(req.query.anio) || new Date().getFullYear()));
   }));
   r.put('/saldos', requiereRol(...GESTION), validar(asignarSaldoSchema), h(async (req, res) =>
@@ -61,16 +70,28 @@ export function rutasAusencias(): Router {
 
   // Flujo de aprobación (responsable / gestión).
   r.get('/solicitudes/pendientes', requiereRol(...APRUEBAN), h(async (req, res) =>
-    res.json(await aus.pendientesUnidad(ctxDe(req), unidadResponsable(req)))));
-  r.post('/solicitudes/:id/aprobar', requiereRol(...APRUEBAN), h(async (req, res) =>
-    res.json(await aus.aprobar(ctxDe(req), String(req.params.id)))));
-  r.post('/solicitudes/:id/denegar', requiereRol(...APRUEBAN), validar(denegarSchema), h(async (req, res) =>
-    res.json(await aus.denegar(ctxDe(req), String(req.params.id), req.body.motivo))));
+    res.json(await aus.pendientesUnidad(ctxDe(req), await unidadesQueResuelve(req)))));
+
+  // Resolver exige competencia sobre la persona, no solo tener el rol: filtrar
+  // el listado no basta cuando aquí se entra por identificador.
+  r.post('/solicitudes/:id/aprobar', requiereRol(...APRUEBAN), h(async (req, res) => {
+    const id = String(req.params.id);
+    await exigirMandoSobrePersona(req, await aus.personaDeSolicitud(ctxDe(req), id));
+    res.json(await aus.aprobar(ctxDe(req), id));
+  }));
+  r.post('/solicitudes/:id/denegar', requiereRol(...APRUEBAN), validar(denegarSchema), h(async (req, res) => {
+    const id = String(req.params.id);
+    await exigirMandoSobrePersona(req, await aus.personaDeSolicitud(ctxDe(req), id));
+    res.json(await aus.denegar(ctxDe(req), id, req.body.motivo));
+  }));
 
   // Calendario de equipo (para ver solapes antes de aprobar).
-  r.get('/equipo/:unidadId', requiereRol(...APRUEBAN), h(async (req, res) =>
-    res.json(await aus.calendarioEquipo(ctxDe(req), String(req.params.unidadId),
-      String(req.query.desde), String(req.query.hasta)))));
+  r.get('/equipo/:unidadId', requiereRol(...APRUEBAN), h(async (req, res) => {
+    const unidadId = String(req.params.unidadId);
+    await exigirMandoSobreUnidad(req, unidadId);
+    res.json(await aus.calendarioEquipo(ctxDe(req), unidadId,
+      String(req.query.desde), String(req.query.hasta)));
+  }));
 
   return r;
 }

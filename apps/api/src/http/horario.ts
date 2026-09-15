@@ -11,6 +11,7 @@ import { informeCSV, informePDF, hashInforme, type MetaInforme } from '../domain
 import { ExportadorInspeccionProvisional } from '../domain/export/inspeccion.js';
 import { autenticarQuiosco, establecerPin } from '../auth/service.js';
 import { requiereRol, requiereSesion, validar, ctxDe } from './middleware.js';
+import { esRLT, exigirMandoSobrePersona } from './alcance.js';
 import { limitarPorOrigen } from './limites.js';
 import {
   ficharSchema, quioscoFicharSchema, correccionSchema, pinSchema, rangoSchema,
@@ -22,17 +23,22 @@ const h =
     fn(req, res).catch(next);
 
 const GESTION = ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'];
-const CONSULTA_TERCEROS = ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL', 'RESPONSABLE_UNIDAD'];
 
-function tieneRol(req: Request, roles: string[]): boolean {
-  return !!req.sesion?.roles.some((r) => roles.includes(r.rol));
-}
-
-/** Resuelve la persona objetivo: la propia salvo que un rol autorizado pida otra. */
-function personaObjetivo(req: Request): string {
+/**
+ * Resuelve la persona objetivo: la propia salvo que se pida otra y se tenga
+ * competencia sobre ella. Tener el rol de responsable ya no basta; hay que
+ * mandar sobre esa persona en concreto.
+ *
+ * Excepción: la representación legal de los trabajadores accede al registro de
+ * jornada de toda la plantilla por derecho propio (art. 34.9 ET).
+ */
+async function personaObjetivo(req: Request): Promise<string> {
   const pedida = (req.query.personaId as string | undefined) ?? (req.body?.personaId as string | undefined);
-  if (pedida && (tieneRol(req, CONSULTA_TERCEROS) || tieneRol(req, ['RLT']))) return pedida;
   const propia = req.sesion?.personaId;
+  if (pedida && pedida !== propia) {
+    if (!esRLT(req)) await exigirMandoSobrePersona(req, pedida);
+    return pedida;
+  }
   if (!propia) throw Object.assign(new Error('El usuario no tiene ficha de persona asociada.'), { status: 400 });
   return propia;
 }
@@ -102,12 +108,9 @@ export function rutasHorario(): Router {
     res.status(201).json(ev);
   }));
 
-  // Mis fichajes (o de un tercero si el rol lo permite).
+  // Mis fichajes (o los de un tercero sobre el que se tenga competencia).
   r.get('/fichajes', validar_query(rangoSchema), h(async (req, res) => {
-    const personaId = personaObjetivo(req);
-    if (!tieneRol(req, CONSULTA_TERCEROS) && personaId !== req.sesion!.personaId) {
-      return res.status(403).json({ error: 'Solo puedes consultar tus propios fichajes.' });
-    }
+    const personaId = await personaObjetivo(req);
     res.json(await listarFichajes(ctxDe(req), personaId, req.query.desde as string, req.query.hasta as string));
   }));
 
@@ -132,7 +135,7 @@ export function rutasHorario(): Router {
 
   // Totalización (propia; terceros solo con rol de gestión/responsable/RLT).
   r.get('/totalizacion', validar_query(rangoSchema), h(async (req, res) => {
-    const personaId = personaObjetivo(req);
+    const personaId = await personaObjetivo(req);
     const desde = req.query.desde as string, hasta = req.query.hasta as string;
     const cal = await contextoCalendario(req.sesion!.entidadId, personaId, desde, hasta);
     res.json(await totalizar(ctxDe(req), personaId, desde, hasta, cal.esFestivo, cal.diasAusencia));
@@ -140,7 +143,7 @@ export function rutasHorario(): Router {
 
   // Exportación CSV con hash de integridad.
   r.get('/informe.csv', validar_query(rangoSchema), h(async (req, res) => {
-    const personaId = personaObjetivo(req);
+    const personaId = await personaObjetivo(req);
     const desde = req.query.desde as string, hasta = req.query.hasta as string;
     const cal = await contextoCalendario(req.sesion!.entidadId, personaId, desde, hasta);
     const t = await totalizar(ctxDe(req), personaId, desde, hasta, cal.esFestivo, cal.diasAusencia);
@@ -154,7 +157,7 @@ export function rutasHorario(): Router {
 
   // Exportación PDF con hash de integridad.
   r.get('/informe.pdf', validar_query(rangoSchema), h(async (req, res) => {
-    const personaId = personaObjetivo(req);
+    const personaId = await personaObjetivo(req);
     const desde = req.query.desde as string, hasta = req.query.hasta as string;
     const cal = await contextoCalendario(req.sesion!.entidadId, personaId, desde, hasta);
     const t = await totalizar(ctxDe(req), personaId, desde, hasta, cal.esFestivo, cal.diasAusencia);
@@ -168,7 +171,7 @@ export function rutasHorario(): Router {
 
   // Interoperabilidad Inspección de Trabajo (aislada tras interfaz; provisional).
   r.get('/inspeccion', requiereRol(...GESTION), validar_query(rangoSchema), h(async (req, res) => {
-    const personaId = personaObjetivo(req);
+    const personaId = await personaObjetivo(req);
     const desde = req.query.desde as string, hasta = req.query.hasta as string;
     const cal = await contextoCalendario(req.sesion!.entidadId, personaId, desde, hasta);
     const t = await totalizar(ctxDe(req), personaId, desde, hasta, cal.esFestivo, cal.diasAusencia);

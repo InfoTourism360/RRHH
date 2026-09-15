@@ -246,17 +246,44 @@ export function misSolicitudes(ctx: Contexto, personaId: string) {
 }
 
 /** Solicitudes pendientes de validación en la unidad del responsable. */
-export function pendientesUnidad(ctx: Contexto, unidadId: string | null) {
+/**
+ * Cola de pendientes. `unidades` a null = toda la entidad; lista vacía = nada.
+ *
+ * El enlace con el puesto es LEFT JOIN y no exige ocupación efectiva a
+ * propósito: antes era un JOIN interno sobre `ocupa_efectivo`, así que la
+ * solicitud de quien estaba en excedencia, en comisión o sin relación grabada
+ * desaparecía de la cola sin error y se quedaba pendiente para siempre.
+ */
+export function pendientesUnidad(ctx: Contexto, unidades: string[] | null) {
   return conTenant(ctx, async (ej) =>
     (await ej.query(
-      `SELECT s.*, p.nombre, p.apellido1, t.denominacion AS tipo
-         FROM solicitud_ausencia s
-         JOIN persona p ON p.id = s.persona_id
-         JOIN tipo_ausencia t ON t.id = s.tipo_ausencia_id
-         JOIN relacion_servicio rs ON rs.persona_id = s.persona_id AND rs.cese IS NULL AND rs.ocupa_efectivo
-         JOIN puesto pu ON pu.id = rs.puesto_id
-        WHERE s.estado = 'SOLICITADA' AND ($1::uuid IS NULL OR pu.unidad_id = $1)
-        ORDER BY s.solicitada_en`, [unidadId])).rows);
+      `SELECT * FROM (
+         SELECT DISTINCT ON (s.id)
+                s.*, p.nombre, p.apellido1, t.denominacion AS tipo,
+                pu.unidad_id, uo.denominacion AS unidad
+           FROM solicitud_ausencia s
+           JOIN persona p ON p.id = s.persona_id
+           JOIN tipo_ausencia t ON t.id = s.tipo_ausencia_id
+      LEFT JOIN relacion_servicio rs ON rs.persona_id = s.persona_id AND rs.cese IS NULL
+      LEFT JOIN puesto pu ON pu.id = rs.puesto_id
+      LEFT JOIN unidad_organica uo ON uo.id = pu.unidad_id
+          WHERE s.estado = 'SOLICITADA'
+            AND ($1::uuid[] IS NULL OR pu.unidad_id = ANY($1::uuid[]))
+          ORDER BY s.id, rs.ocupa_efectivo DESC NULLS LAST
+       ) q
+       ORDER BY q.solicitada_en`,
+      [unidades])).rows);
+}
+
+/** Persona a la que pertenece una solicitud (para comprobar competencia). */
+export function personaDeSolicitud(ctx: Contexto, id: string): Promise<string> {
+  return conTenant(ctx, async (ej) => {
+    const r = await ej.query<{ persona_id: string }>(
+      'SELECT persona_id FROM solicitud_ausencia WHERE id = $1', [id]);
+    const p = r.rows[0]?.persona_id;
+    if (!p) throw new ErrorDominio('NO_ENCONTRADO', 'Solicitud no encontrada.');
+    return p;
+  });
 }
 
 /** Calendario de equipo: ausencias aprobadas de la unidad (para ver solapes). */

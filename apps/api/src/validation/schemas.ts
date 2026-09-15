@@ -83,11 +83,18 @@ export const cambioSituacionSchema = z
 // ------------------------------- CONTROL HORARIO ----------------------------
 const geoSchema = z.object({ lat: z.number().min(-90).max(90), lon: z.number().min(-180).max(180) });
 
+/**
+ * Instante aportado por el cliente. Se exige zona horaria explícita —UTC o
+ * desfase—, nunca una hora local suelta: la madrugada del cambio de octubre
+ * "02:30" ocurre dos veces y no hay forma de saber a cuál se refiere.
+ */
+const instanteCliente = z.string().datetime({ offset: true });
+
 export const ficharSchema = z
   .object({
     tipo: z.enum(['ENTRADA', 'SALIDA', 'INICIO_PAUSA', 'FIN_PAUSA']),
     origen: z.enum(['WEB', 'MOVIL', 'QUIOSCO']),
-    momentoCliente: z.string().datetime().nullable().optional(),
+    momentoCliente: instanteCliente.nullable().optional(),
     geo: geoSchema.nullable().optional(),
   })
   .strict();
@@ -113,7 +120,7 @@ export const correccionSchema = z
     corrigeEventoId: z.string().uuid().nullable().optional(),
     personaId: z.string().uuid().nullable().optional(),
     tipo: z.enum(['ENTRADA', 'SALIDA', 'INICIO_PAUSA', 'FIN_PAUSA']).nullable().optional(),
-    momentoCliente: z.string().datetime().nullable().optional(),
+    momentoCliente: instanteCliente.nullable().optional(),
     motivo: z.string().min(3).max(500),
   })
   .strict();

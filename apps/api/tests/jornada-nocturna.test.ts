@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as est from '../src/domain/estructura.js';
 import { conTenant } from '../src/db/pool.js';
 import { totalizar, jornadaDelDia, repartirPorDia } from '../src/domain/totalizacion.js';
+import { ficharSchema } from '../src/validation/schemas.js';
 import { crearEntidadDemo } from './helpers.js';
 
 // ---------------------------------------------------------------------------
@@ -108,6 +109,86 @@ describe('Turno de noche, de extremo a extremo', () => {
     const j = await jornadaDelDia({ entidadId: a.entidadId, usuarioId: null }, id, '2026-02-11');
     expect(j.abiertaDesde).not.toBeNull();
     expect(new Date(j.abiertaDesde!).toISOString()).toBe(new Date('2026-02-10T22:00:00+01:00').toISOString());
+  });
+
+  // -------------------------------------------------------------------------
+  // Cambio de hora. Lo que tiene que constar en el registro de jornada es el
+  // tiempo realmente trabajado, no lo que marcaba el reloj de pared: la noche
+  // de marzo se trabaja una hora menos y la de octubre una hora más, aunque en
+  // ambas se fiche "de 22:00 a 06:00". Que se pague igual o distinto es cosa
+  // del convenio, no del registro.
+  // -------------------------------------------------------------------------
+
+  it('la noche en que se adelanta el reloj cuenta 7 horas, no 8', async () => {
+    const a = await crearEntidadDemo('DST1');
+    const p = await personaEn(a.entidadId);
+    const id = p.id as string;
+    // 29-03-2026: a las 02:00 se pasa a las 03:00 (CET → CEST).
+    await insertarEvento(a.entidadId, id, 'ENTRADA', '2026-03-28T22:00:00+01:00');
+    await insertarEvento(a.entidadId, id, 'SALIDA', '2026-03-29T06:00:00+02:00');
+
+    const t = await totalizar({ entidadId: a.entidadId, usuarioId: null }, id, '2026-03-28', '2026-03-29');
+    expect(t.totales.trabajadoMin).toBe(420);
+    expect(t.dias[0]!.fecha).toBe('2026-03-28');
+  });
+
+  it('la noche en que se atrasa el reloj cuenta 9 horas, no 8', async () => {
+    const a = await crearEntidadDemo('DST2');
+    const p = await personaEn(a.entidadId);
+    const id = p.id as string;
+    // 25-10-2026: a las 03:00 se vuelve a las 02:00 (CEST → CET).
+    await insertarEvento(a.entidadId, id, 'ENTRADA', '2026-10-24T22:00:00+02:00');
+    await insertarEvento(a.entidadId, id, 'SALIDA', '2026-10-25T06:00:00+01:00');
+
+    const t = await totalizar({ entidadId: a.entidadId, usuarioId: null }, id, '2026-10-24', '2026-10-25');
+    expect(t.totales.trabajadoMin).toBe(540);
+    expect(t.dias[0]!.fecha).toBe('2026-10-24');
+  });
+
+  it('la pausa de la madrugada del cambio también sale en tiempo real', async () => {
+    const a = await crearEntidadDemo('DST3');
+    const p = await personaEn(a.entidadId);
+    const id = p.id as string;
+    // La pausa empieza a la 01:45 CET y termina a las 03:15 CEST: media hora
+    // real, aunque el reloj de pared diga hora y media.
+    await insertarEvento(a.entidadId, id, 'ENTRADA', '2026-03-28T22:00:00+01:00');
+    await insertarEvento(a.entidadId, id, 'INICIO_PAUSA', '2026-03-29T01:45:00+01:00');
+    await insertarEvento(a.entidadId, id, 'FIN_PAUSA', '2026-03-29T03:15:00+02:00');
+    await insertarEvento(a.entidadId, id, 'SALIDA', '2026-03-29T06:00:00+02:00');
+
+    const t = await totalizar({ entidadId: a.entidadId, usuarioId: null }, id, '2026-03-28', '2026-03-29');
+    expect(t.dias).toHaveLength(1);
+    expect(t.dias[0]!.trabajadoMin).toBe(390); // 420 de presencia − 30 de pausa
+  });
+
+  it('el día del cambio de hora tiene jornada teórica normal', async () => {
+    // Guarda contra un NaN: la jornada teórica se calcula sobre la medianoche
+    // local del día, y ese día dura 23 o 25 horas.
+    const a = await crearEntidadDemo('DST4');
+    const p = await personaEn(a.entidadId);
+    const id = p.id as string;
+    await insertarEvento(a.entidadId, id, 'ENTRADA', '2026-03-30T08:00:00+02:00');
+    await insertarEvento(a.entidadId, id, 'SALIDA', '2026-03-30T15:30:00+02:00');
+
+    const t = await totalizar({ entidadId: a.entidadId, usuarioId: null }, id, '2026-03-30', '2026-03-30');
+    expect(Number.isFinite(t.dias[0]!.teoricoMin)).toBe(true);
+    expect(t.dias[0]!.teoricoMin).toBe(450);
+    expect(t.dias[0]!.trabajadoMin).toBe(450);
+  });
+
+  it('no admite una hora local sin zona, que en octubre es ambigua', () => {
+    const marca = (momentoCliente: string) =>
+      ficharSchema.safeParse({ tipo: 'ENTRADA', origen: 'WEB', momentoCliente }).success;
+
+    // El 25-10-2026 las 02:30 ocurren dos veces: sin zona no hay forma de saber
+    // a cuál de las dos se refiere, así que no se acepta.
+    expect(marca('2026-10-25T02:30:00')).toBe(false);
+    // Las dos formas inequívocas sí, y son instantes distintos.
+    expect(marca('2026-10-25T02:30:00+02:00')).toBe(true);
+    expect(marca('2026-10-25T02:30:00+01:00')).toBe(true);
+    expect(marca('2026-10-25T00:30:00Z')).toBe(true);
+    expect(new Date('2026-10-25T02:30:00+02:00').getTime())
+      .not.toBe(new Date('2026-10-25T02:30:00+01:00').getTime());
   });
 
   it('la jornada diurna normal no cambia', async () => {

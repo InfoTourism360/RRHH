@@ -2,10 +2,19 @@ import { useState, type FormEvent } from 'react';
 import { useAuth } from '../auth';
 import { ApiError } from '../api';
 import { Alerta, Campo } from '../ui';
+import { useAjustes } from '../config';
+
+// El CIF de la entidad se repite en cada acceso y no es un secreto, así que se
+// recuerda en el navegador. Antes venía fijo en el código con el CIF de la
+// entidad de demostración: cualquier cliente habría visto el de otro.
+const CIF_RECORDADO = 'rrhh.cif';
 
 export function Login() {
   const { entrar, caducada } = useAuth();
-  const [cif, setCif] = useState('P4600001A');
+  const { modoDemo } = useAjustes();
+  const [cif, setCif] = useState(() => {
+    try { return localStorage.getItem(CIF_RECORDADO) ?? ''; } catch { return ''; }
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totp, setTotp] = useState('');
@@ -19,6 +28,7 @@ export function Login() {
     setEnviando(true);
     try {
       await entrar(cif, email, password, pideTotp ? totp : undefined);
+      try { localStorage.setItem(CIF_RECORDADO, cif); } catch { /* sin almacenamiento */ }
     } catch (err) {
       if (err instanceof ApiError && err.codigo === 'MFA_REQUERIDO') {
         setPideTotp(true);
@@ -50,7 +60,9 @@ export function Login() {
             <li className="flex gap-2.5"><span aria-hidden="true">✓</span> Datos de cada entidad aislados y sin tratamiento biométrico.</li>
           </ul>
         </div>
-        <p className="text-white/85 text-xs">Entorno de demostración · datos ficticios</p>
+        <p className="text-white/85 text-xs">
+          {modoDemo ? 'Entorno de demostración · datos ficticios' : 'Gestión de personal · Sector público'}
+        </p>
       </div>
 
       {/* Formulario */}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
+import { useAjustes } from './config';
 import {
   IcoPanel, IcoReloj, IcoAusencias, IcoCalendario, IcoDoc, IcoUsuario,
   IcoSalir, IcoMenu, IcoCerrar, IcoInicio, IcoPlantilla, IcoActividad, IcoAprobar,
@@ -36,6 +37,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const loc = useLocation();
   const mainRef = useRef<HTMLElement>(null);
   const [abierto, setAbierto] = useState(false);
+  const { modoDemo } = useAjustes();
   const esGestion = !!yo?.roles.some((r) => ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'].includes(r.rol));
   const esAdmin = !!yo?.roles.some((r) => r.rol === 'ADMIN_ENTIDAD');
   const esResponsable = !!yo?.roles.some((r) => r.rol === 'RESPONSABLE_UNIDAD');
@@ -122,9 +124,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <IcoMenu />
           </button>
           <span className="lg:hidden font-bold">Gestión de Personal</span>
-          <span className="ml-auto hidden sm:inline-flex items-center gap-2 text-xs font-medium text-apagado bg-lienzo border border-linea rounded-full px-3 py-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-exito" /> Entorno de demostración
-          </span>
+          {modoDemo && (
+            <span className="ml-auto hidden sm:inline-flex items-center gap-2 text-xs font-medium text-apagado bg-lienzo border border-linea rounded-full px-3 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-exito" /> Entorno de demostración
+            </span>
+          )}
         </header>
 
         <main id="contenido" ref={mainRef} tabIndex={-1}
@@ -133,7 +137,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </main>
 
         <footer className="px-4 lg:px-8 py-4 text-xs text-tenue flex flex-wrap gap-x-4 gap-y-1 justify-between border-t border-linea">
-          <span>Datos de demostración · Registro horario inmutable · Sin datos biométricos</span>
+          <span>
+            {modoDemo && 'Datos de demostración · '}
+            Registro horario inmutable · Sin datos biométricos
+          </span>
           <a href="/accesibilidad" className="underline hover:text-marca-700">Declaración de accesibilidad</a>
         </footer>
       </div>

@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { conTenant, type Contexto } from '../../db/pool.js';
+import { NOMINA_EJEMPLO } from './nomina-ejemplo.js';
 
 export interface ConceptoNomina {
   cuantia?: string | number;
@@ -63,61 +64,6 @@ export interface DatosNomina {
   };
 }
 
-export const NOMINA_DEMO_DEFECTO: DatosNomina = {
-  empresa: {
-    nombre: 'ENTIDAD DE DEMOSTRACIÓN',
-    domicilio: 'Plaza Mayor, 1 - 46000 Valencia',
-    cif: 'P4600001A',
-    numInscripSS: '46/1234567/89',
-  },
-  trabajador: {
-    nombre: 'GARCÍA MARTÍNEZ, LUCÍA',
-    categoria: 'Técnico de Administración General',
-    antiguedad: '01/02/2018',
-    numAfiliacion: '461234567890',
-    grupoCotizacion: '07',
-    nif: '00000001R',
-  },
-  periodo: {
-    desdeDia: 1,
-    hastaDia: 31,
-    mes: 'AGOSTO',
-    anio: 2018,
-    totalDias: 30,
-  },
-  devengos: [
-    { cuantia: 30, concepto: 'SALARIO BASE', importe: 26.12, total: 783.74 },
-    { cuantia: 30, concepto: 'COMP. DEDICACION', importe: 3.52, total: 105.70 },
-    { cuantia: 30, concepto: 'MEJ VOLUNTARIA', importe: 13.29, total: 398.70 },
-    { cuantia: 30, concepto: 'P. NO COMPETENCIA', importe: 3.00, total: 90.00 },
-    { cuantia: 30, concepto: 'P.P.Paga Extra', importe: 4.35, total: 130.62 },
-  ],
-  deducciones: [
-    { cuantia: '4,70', concepto: 'Cont.Comunes', deduccion: 70.91 },
-    { cuantia: '1,55', concepto: 'Desempleo', deduccion: 23.39 },
-    { cuantia: '0,10', concepto: 'For.Profesional', deduccion: 1.51 },
-    { cuantia: '10,80', concepto: 'I.R.P.F.', deduccion: 162.95 },
-  ],
-  bases: {
-    remuneracionMensual: 1378.14,
-    prorrataPagasExtras: 130.62,
-    baseContingenciasComunes: 1508.76,
-    tipoContingenciasComunes: 23.60,
-    aportacionEmpresaContingenciasComunes: 356.07,
-    tipoATEP: 1.70,
-    aportacionEmpresaATEP: 25.65,
-    baseDesempleo: 1508.76,
-    tipoDesempleo: 5.50,
-    aportacionEmpresaDesempleo: 82.98,
-    baseFormacion: 1508.76,
-    tipoFormacion: 0.60,
-    aportacionEmpresaFormacion: 9.05,
-    baseFogasa: 1508.76,
-    tipoFogasa: 0.20,
-    aportacionEmpresaFogasa: 3.02,
-    baseIRPF: 1508.76,
-  },
-};
 
 function fmtNum(n: number | undefined | null): string {
   if (n === undefined || n === null || Number.isNaN(n)) return '';
@@ -126,17 +72,17 @@ function fmtNum(n: number | undefined | null): string {
 
 export function generarNominaPDF(datosParciales?: Partial<DatosNomina>): Promise<Buffer> {
   const datos: DatosNomina = {
-    empresa: { ...NOMINA_DEMO_DEFECTO.empresa, ...datosParciales?.empresa },
-    trabajador: { ...NOMINA_DEMO_DEFECTO.trabajador, ...datosParciales?.trabajador },
-    periodo: { ...NOMINA_DEMO_DEFECTO.periodo, ...datosParciales?.periodo },
-    devengos: datosParciales?.devengos ?? NOMINA_DEMO_DEFECTO.devengos,
-    deducciones: datosParciales?.deducciones ?? NOMINA_DEMO_DEFECTO.deducciones,
-    bases: { ...NOMINA_DEMO_DEFECTO.bases, ...datosParciales?.bases },
+    empresa: { ...NOMINA_EJEMPLO.empresa, ...datosParciales?.empresa },
+    trabajador: { ...NOMINA_EJEMPLO.trabajador, ...datosParciales?.trabajador },
+    periodo: { ...NOMINA_EJEMPLO.periodo, ...datosParciales?.periodo },
+    devengos: datosParciales?.devengos ?? NOMINA_EJEMPLO.devengos,
+    deducciones: datosParciales?.deducciones ?? NOMINA_EJEMPLO.deducciones,
+    bases: { ...NOMINA_EJEMPLO.bases, ...datosParciales?.bases },
   };
 
-  // Los importes solo son reales si los aporta quien llama. Si no, salen de
-  // NOMINA_DEMO_DEFECTO, y entonces el papel no puede presentarse como una
-  // nómina: lleva nombre y NIF de una persona pero cifras inventadas.
+  // Los importes solo son reales si los aporta quien llama. Si no, salen del
+  // ejemplo, y entonces el papel no puede presentarse como una nómina: lleva
+  // nombre y NIF de una persona pero cifras inventadas.
   const importesFicticios =
     !datosParciales?.devengos && !datosParciales?.deducciones && !datosParciales?.bases;
 
@@ -509,13 +455,79 @@ const MESES_ES = [
   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE',
 ];
 
+/** Lo que no consta se deja a la vista, en lugar de rellenarlo con un inventado. */
+export const SIN_DATO = '— no consta —';
+
+export interface EntidadNomina { nombre: string; cif: string }
+export interface PersonaNomina {
+  nombre: string;
+  apellido1: string;
+  apellido2: string | null;
+  num_documento: string;
+  denominacion_puesto: string | null;
+  toma_posesion: string | null;
+}
+
+/**
+ * Arma la cabecera del recibo con lo que consta y solo con lo que consta.
+ *
+ * Está separada de la consulta para poder probarla: aquí vivía el fallo de
+ * copiar del ejemplo el domicilio y los números de Seguridad Social.
+ */
+export function cabeceraNomina(
+  ent: EntidadNomina | undefined,
+  persona: PersonaNomina | undefined,
+  opciones?: { mes?: string; anio?: number },
+): { datosParciales: Partial<DatosNomina>; mes: string; anio: number } {
+  const hoy = new Date();
+  const mes = opciones?.mes?.toUpperCase() || MESES_ES[hoy.getMonth()] || 'ENERO';
+  const anio = opciones?.anio || hoy.getFullYear();
+
+  const nombreApellidos = persona
+    ? `${persona.apellido1} ${persona.apellido2 ?? ''}, ${persona.nombre}`.trim().toUpperCase()
+    : SIN_DATO;
+
+  const antiguedad = persona?.toma_posesion
+    ? new Date(persona.toma_posesion).toLocaleDateString('es-ES')
+    : SIN_DATO;
+
+  return {
+    mes,
+    anio,
+    datosParciales: {
+      empresa: {
+        nombre: ent?.nombre?.toUpperCase() ?? SIN_DATO,
+        cif: ent?.cif ?? SIN_DATO,
+        // Ninguno de los dos se guarda todavía en la entidad.
+        domicilio: SIN_DATO,
+        numInscripSS: SIN_DATO,
+      },
+      trabajador: {
+        nombre: nombreApellidos,
+        categoria: persona?.denominacion_puesto ?? SIN_DATO,
+        antiguedad,
+        // Tampoco se guardan en la ficha de personal.
+        numAfiliacion: SIN_DATO,
+        grupoCotizacion: SIN_DATO,
+        nif: persona?.num_documento ?? SIN_DATO,
+      },
+      periodo: { desdeDia: 1, hastaDia: 31, mes, anio, totalDias: 30 },
+    },
+  };
+}
+
 /**
  * Rellena la cabecera (entidad, persona, puesto, periodo) con datos reales.
  *
  * OJO: los devengos, las deducciones y las bases de cotización NO se calculan;
- * salen de `NOMINA_DEMO_DEFECTO`. El PDF sale por eso marcado como documento de
+ * salen de `NOMINA_EJEMPLO`. El PDF sale por eso marcado como documento de
  * demostración. Antes de usar esto como nómina de verdad hay que calcular los
  * importes y pasarlos en `datosParciales`; solo entonces desaparece la marca.
+ *
+ * Lo que sí es real es la identificación: el domicilio de la entidad, su número
+ * de inscripción en la Seguridad Social y el de afiliación de la persona no se
+ * guardan todavía, así que salen como "no consta". Antes se copiaban del
+ * ejemplo y un ayuntamiento recibía un recibo con el domicilio de otro.
  */
 export async function generarNominaParaPersona(
   ctx: Contexto,
@@ -551,44 +563,7 @@ export async function generarNominaParaPersona(
     );
     const persona = pRes.rows[0];
 
-    const fechaHoy = new Date();
-    const mesDefecto = MESES_ES[fechaHoy.getMonth()] ?? 'AGOSTO';
-    const anioDefecto = fechaHoy.getFullYear();
-
-    const mes = opciones?.mes?.toUpperCase() || mesDefecto;
-    const anio = opciones?.anio || anioDefecto;
-
-    const nombreApellidos = persona
-      ? `${persona.apellido1} ${persona.apellido2 ?? ''}, ${persona.nombre}`.trim()
-      : NOMINA_DEMO_DEFECTO.trabajador.nombre;
-
-    const antiguedad = persona?.toma_posesion
-      ? new Date(persona.toma_posesion).toLocaleDateString('es-ES')
-      : NOMINA_DEMO_DEFECTO.trabajador.antiguedad;
-
-    const datosParciales: Partial<DatosNomina> = {
-      empresa: {
-        nombre: ent?.nombre?.toUpperCase() ?? NOMINA_DEMO_DEFECTO.empresa.nombre,
-        cif: ent?.cif ?? NOMINA_DEMO_DEFECTO.empresa.cif,
-        domicilio: NOMINA_DEMO_DEFECTO.empresa.domicilio,
-        numInscripSS: NOMINA_DEMO_DEFECTO.empresa.numInscripSS,
-      },
-      trabajador: {
-        nombre: nombreApellidos.toUpperCase(),
-        categoria: persona?.denominacion_puesto ?? NOMINA_DEMO_DEFECTO.trabajador.categoria,
-        antiguedad,
-        numAfiliacion: NOMINA_DEMO_DEFECTO.trabajador.numAfiliacion,
-        grupoCotizacion: NOMINA_DEMO_DEFECTO.trabajador.grupoCotizacion,
-        nif: persona?.num_documento ?? NOMINA_DEMO_DEFECTO.trabajador.nif,
-      },
-      periodo: {
-        desdeDia: 1,
-        hastaDia: 31,
-        mes,
-        anio,
-        totalDias: 30,
-      },
-    };
+    const { datosParciales, mes, anio } = cabeceraNomina(ent, persona, opciones);
 
     const buffer = await generarNominaPDF(datosParciales);
     const nombreFichero = `nomina_${mes.toLowerCase()}_${anio}.pdf`;

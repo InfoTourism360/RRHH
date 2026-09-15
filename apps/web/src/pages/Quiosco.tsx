@@ -144,7 +144,7 @@ export function Quiosco() {
             value={cifTmp}
             onChange={(e) => setCifTmp(e.target.value)}
             required
-            placeholder="Ej. P4600001A"
+            placeholder="CIF de la entidad"
             className="w-full rounded-lg border border-linea px-4 py-3 text-lg num mb-5
                        focus:border-marca-500 focus:ring-4 focus:ring-marca-500/15 outline-none uppercase"
           />

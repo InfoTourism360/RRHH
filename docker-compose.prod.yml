@@ -50,6 +50,9 @@ services:
     environment:
       <<: *secrets
       PORT: "3001"
+      # Rotula la interfaz como demostración. En una entidad real: sin definir
+      # o "false"; ponlo a "true" solo para enseñar el producto.
+      MODO_DEMO: "${MODO_DEMO:-false}"
     depends_on:
       db: { condition: service_healthy }
       init: { condition: service_completed_successfully }

@@ -16,6 +16,9 @@ const schema = z.object({
   MAX_INTENTOS_LOGIN: z.coerce.number().int().positive().default(5),
   BLOQUEO_MINUTOS: z.coerce.number().int().positive().default(15),
   APP_ENCRYPTION_KEY: z.string().min(1),
+  // Rotula la interfaz como entorno de demostración con datos ficticios.
+  // Apagado por defecto: en el despliegue de una entidad real no debe salir.
+  MODO_DEMO: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
 });
 
 const parsed = schema.safeParse(process.env);

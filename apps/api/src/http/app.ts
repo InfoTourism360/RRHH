@@ -9,6 +9,7 @@ import { consultarRPT, resumirRPT } from '../domain/rpt.js';
 import { rptCSV } from '../domain/export/rpt.js';
 import { hashInforme } from '../domain/export/informe.js';
 import { appPool, conTenant } from '../db/pool.js';
+import { env } from '../config/env.js';
 import { rutasHorario } from './horario.js';
 import { rutasAusencias } from './ausencias.js';
 import { rutasPortal } from './portal.js';
@@ -57,6 +58,10 @@ export function crearApp() {
       res.status(503).json({ ok: false, bd: 'no disponible' });
     }
   }));
+
+  // Ajustes de presentación que la interfaz necesita antes de haber iniciado
+  // sesión. No lleva nada sensible: solo si esto es una demostración.
+  app.get('/config', (_req, res) => res.json({ modoDemo: env.MODO_DEMO }));
 
   // Límite general por origen, como red de seguridad frente a abuso.
   app.use(limitarPorOrigen({ nombre: 'general', ventanaMs: 60_000, maximo: 300 }));

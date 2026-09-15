@@ -57,18 +57,71 @@ function fechaLocal(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-function minutosTrabajados(eventos: EventoEfectivo[]): { presencia: number; pausa: number } {
-  let presencia = 0;
+/**
+ * Tope de un tramo para darlo por cerrado. Una guardia de 24 h existe; más allá
+ * es que alguien no fichó la salida, y no se inventa: el tramo se descarta y se
+ * corrige por el procedimiento, como cualquier otro olvido.
+ */
+const MAX_TRAMO_MIN = 24 * 60;
+
+interface Acumulado { presencia: number; pausa: number }
+
+/**
+ * Reparte por día los tramos ENTRADA→SALIDA y las pausas.
+ *
+ * Empareja recorriendo TODA la línea temporal, no cada día por separado. Antes
+ * se agrupaba primero por día y se emparejaba dentro de cada bolsa, de modo que
+ * un turno de noche perdía las dos patas: la ENTRADA de las 22:00 no encontraba
+ * salida en su día y la SALIDA de las 06:00 no encontraba entrada en el suyo.
+ * No es que se repartieran las horas: se perdían enteras.
+ *
+ * Un tramo se imputa al día en que EMPIEZA. El turno pertenece a la jornada que
+ * se inició, que es como se cuadran los cuadrantes de policía o de bomberos.
+ */
+export function repartirPorDia(eventos: EventoEfectivo[]): {
+  porDia: Map<string, Acumulado>;
+  entradaAbierta: Date | null;
+  pausaAbierta: Date | null;
+} {
+  const porDia = new Map<string, Acumulado>();
+  const sumar = (fecha: string, campo: keyof Acumulado, min: number) => {
+    const a = porDia.get(fecha) ?? { presencia: 0, pausa: 0 };
+    a[campo] += min;
+    porDia.set(fecha, a);
+  };
+
   let entrada: Date | null = null;
-  let pausa = 0;
   let iniPausa: Date | null = null;
+
   for (const e of eventos) {
-    if (e.tipo === 'ENTRADA') entrada = e.momento;
-    else if (e.tipo === 'SALIDA' && entrada) { presencia += (e.momento.getTime() - entrada.getTime()) / 60000; entrada = null; }
-    else if (e.tipo === 'INICIO_PAUSA') iniPausa = e.momento;
-    else if (e.tipo === 'FIN_PAUSA' && iniPausa) { pausa += (e.momento.getTime() - iniPausa.getTime()) / 60000; iniPausa = null; }
+    if (e.tipo === 'ENTRADA') {
+      // El día queda registrado aunque el tramo no llegue a cerrarse: si alguien
+      // olvidó fichar la salida, su día tiene que salir en el informe con cero
+      // para que se vea y se corrija, no desaparecer.
+      const dia = fechaLocal(e.momento);
+      if (!porDia.has(dia)) porDia.set(dia, { presencia: 0, pausa: 0 });
+      // Dos ENTRADA seguidas: la anterior quedó sin cerrar y no se puede inferir.
+      entrada = e.momento;
+    } else if (e.tipo === 'SALIDA') {
+      if (entrada) {
+        const min = (e.momento.getTime() - entrada.getTime()) / 60000;
+        if (min >= 0 && min <= MAX_TRAMO_MIN) sumar(fechaLocal(entrada), 'presencia', min);
+        entrada = null;
+      }
+    } else if (e.tipo === 'INICIO_PAUSA') {
+      iniPausa = e.momento;
+    } else if (e.tipo === 'FIN_PAUSA') {
+      if (iniPausa) {
+        const min = (e.momento.getTime() - iniPausa.getTime()) / 60000;
+        // La pausa se imputa al día del turno que la contiene, no al del reloj:
+        // si no, una pausa a las 02:00 restaría de un día que no trabajó.
+        const dia = fechaLocal(entrada ?? iniPausa);
+        if (min >= 0 && min <= MAX_TRAMO_MIN) sumar(dia, 'pausa', min);
+        iniPausa = null;
+      }
+    }
   }
-  return { presencia: Math.round(presencia), pausa: Math.round(pausa) };
+  return { porDia, entradaAbierta: entrada, pausaAbierta: iniPausa };
 }
 
 export interface JornadaDelDia {
@@ -94,22 +147,18 @@ export async function jornadaDelDia(ctx: Contexto, personaId: string, fecha: str
               corrige_evento_id, accion_correccion
          FROM fichaje_evento
         WHERE persona_id = $1
-          AND momento_servidor >= $2::date AND momento_servidor < ($2::date + 1)
+          AND momento_servidor >= ($2::date - 1) AND momento_servidor < ($2::date + 1)
         ORDER BY momento_servidor`,
+      // Se mira también el día anterior: quien entró a las 22:00 sigue dentro de
+      // su jornada a las 02:00 y tiene que ver su turno en marcha, no un cero.
       [personaId, fecha],
     );
-    let presencia = 0, pausa = 0;
-    let entrada: Date | null = null, iniPausa: Date | null = null;
-    for (const e of resolverEfectivos(r.rows)) {
-      if (e.tipo === 'ENTRADA') entrada = e.momento;
-      else if (e.tipo === 'SALIDA' && entrada) { presencia += (e.momento.getTime() - entrada.getTime()) / 60000; entrada = null; }
-      else if (e.tipo === 'INICIO_PAUSA') iniPausa = e.momento;
-      else if (e.tipo === 'FIN_PAUSA' && iniPausa) { pausa += (e.momento.getTime() - iniPausa.getTime()) / 60000; iniPausa = null; }
-    }
+    const { porDia, entradaAbierta, pausaAbierta } = repartirPorDia(resolverEfectivos(r.rows));
+    const { presencia, pausa } = porDia.get(fecha) ?? { presencia: 0, pausa: 0 };
     return {
-      cerradoMin: Math.round(presencia - pausa),
-      abiertaDesde: entrada?.toISOString() ?? null,
-      pausaDesde: iniPausa?.toISOString() ?? null,
+      cerradoMin: Math.round(presencia) - Math.round(pausa),
+      abiertaDesde: entradaAbierta?.toISOString() ?? null,
+      pausaDesde: pausaAbierta?.toISOString() ?? null,
       teoricoMin: minutosTeoricos(pol, new Date(`${fecha}T00:00:00`)),
     };
   });
@@ -151,25 +200,25 @@ export async function totalizar(
               corrige_evento_id, accion_correccion
          FROM fichaje_evento
         WHERE persona_id = $1
-          AND momento_servidor >= $2::date AND momento_servidor < ($3::date + 1)
+          AND momento_servidor >= $2::date AND momento_servidor < ($3::date + 2)
         ORDER BY momento_servidor`,
+      // Un día de margen por la derecha: sin él, la SALIDA de madrugada de un
+      // turno iniciado el último día del rango quedaría fuera y se perdería.
       [personaId, desde, hasta],
     );
-    const efectivos = resolverEfectivos(r.rows);
+    const { porDia } = repartirPorDia(resolverEfectivos(r.rows));
 
-    // Agrupa por día local.
-    const porDia = new Map<string, EventoEfectivo[]>();
-    for (const e of efectivos) {
-      const k = fechaLocal(e.momento);
-      (porDia.get(k) ?? porDia.set(k, []).get(k)!).push(e);
-    }
     // Une los días con eventos y los días de ausencia aprobada (aunque no fichara).
-    const clavesDia = new Set<string>([...porDia.keys(), ...(diasAusencia ?? [])]);
+    // Se recortan los que caen fuera: la consulta pide un día de más para poder
+    // cerrar un turno que empezó el último día del rango.
+    const clavesDia = new Set<string>(
+      [...porDia.keys(), ...(diasAusencia ?? [])].filter((f) => f >= desde && f <= hasta),
+    );
 
     const dias: DiaTotalizado[] = [];
     for (const fecha of [...clavesDia].sort()) {
-      const { presencia, pausa } = minutosTrabajados(porDia.get(fecha) ?? []);
-      const trabajado = Math.max(0, presencia - pausa);
+      const { presencia, pausa } = porDia.get(fecha) ?? { presencia: 0, pausa: 0 };
+      const trabajado = Math.max(0, Math.round(presencia) - Math.round(pausa));
       const teorico = minutosTeoricos(pol, new Date(`${fecha}T00:00:00`));
       const festivo = (esFestivo?.(fecha) ?? false) || teorico === 0;
       const ausencia = diasAusencia?.has(fecha) ?? false;

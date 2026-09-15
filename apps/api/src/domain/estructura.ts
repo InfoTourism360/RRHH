@@ -15,11 +15,23 @@ export class ErrorDominio extends Error {
   }
 }
 
+/**
+ * Tablas que `obtenerFila` puede leer. El nombre de la tabla se interpola en el
+ * SQL porque no admite parámetro, así que la lista no es documentación: es lo
+ * que impide que un nombre llegado de fuera acabe dentro de la consulta.
+ */
+const TABLAS_LEIBLES = ['unidad_organica', 'plaza', 'puesto', 'persona', 'relacion_servicio'] as const;
+type TablaLeible = (typeof TABLAS_LEIBLES)[number];
+
 async function obtenerFila<T extends Record<string, unknown>>(
   ej: Ejecutor,
-  tabla: string,
+  tabla: TablaLeible,
   id: string,
 ): Promise<T> {
+  // Cinturón además del tipo: TypeScript no está delante en tiempo de ejecución.
+  if (!TABLAS_LEIBLES.includes(tabla)) {
+    throw new ErrorDominio('TABLA_NO_PERMITIDA', `Tabla no consultable: ${tabla}`);
+  }
   const r = await ej.query<T>(`SELECT * FROM ${tabla} WHERE id = $1`, [id]);
   const fila = r.rows[0];
   if (!fila) throw new ErrorDominio('NO_ENCONTRADO', `${tabla} ${id} no encontrado.`);

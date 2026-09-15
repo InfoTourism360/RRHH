@@ -53,8 +53,8 @@ npm run dev -w @rrhh/web   # http://localhost:5173 (proxy /api -> :3001)
 PIN — nunca con biometría. El PIN lo asigna el administrador desde *Accesos*.
 
 Logins de demo tras el seed (CIF `P4600001A`):
-- Administrador: `admin@demo.es` / `Demo1234!` (cuadro de mando + back-office)
-- Empleado (portal): `empleado@demo.es` / `Demo1234!` (Quiosco: DNI `00000001R` o `empleado@demo.es`, PIN `1234`)
+- Administrador: `admin@demo.es` / `Demostracion2026!` (cuadro de mando + back-office)
+- Empleado (portal): `empleado@demo.es` / `Demostracion2026!` (Quiosco: DNI `00000001R` o `empleado@demo.es`, PIN `1234`)
 
 ## Qué puede hacer cada rol
 
@@ -100,6 +100,13 @@ de aplicación con la del despliegue, así que no hay credenciales en el SQL.
 **HTTPS**: `scripts/preparar-produccion.sh --tls` genera certificados autofirmados
 y activa `nginx-https.conf` (redirección 80→443 y HSTS). En producción real se
 sustituyen por los certificados del dominio.
+
+**Una sola instancia de API.** El límite de peticiones por origen lleva el
+contador en la memoria del proceso. Con dos réplicas detrás de un balanceador el
+margen real se duplica en silencio: 20 intentos de acceso por ventana pasan a ser
+40. Para una entidad local una instancia sobra; si algún día hace falta escalar,
+el contador tiene que ir antes a un almacén compartido. El bloqueo por intentos
+fallidos —de la contraseña y del PIN— sí es de base de datos y no se ve afectado.
 
 ## Copias de seguridad (ENS)
 

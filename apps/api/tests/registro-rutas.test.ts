@@ -75,7 +75,8 @@ describe('Registro de actividad: la ruta registrada es la que se pidió', () => 
 
   it('registra la misma ruta tanto si falla la validación como si falla la credencial', async () => {
     const desde = await ultimaTraza();
-    const comun = { cif: 'X00000000X', dni: 'inexistente@test.es', tipo: 'ENTRADA', origen: 'QUIOSCO' };
+    // Sin `origen`: la ruta de quiosco ya no lo admite, lo fija ella.
+    const comun = { cif: 'X00000000X', dni: 'inexistente@test.es', tipo: 'ENTRADA' };
 
     // Credencial inválida: responde el manejador de errores de la app.
     const credencial = await fetch(`${base}/horario/quiosco/fichar`, {

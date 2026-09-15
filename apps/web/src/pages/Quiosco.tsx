@@ -83,7 +83,7 @@ export function Quiosco() {
     try {
       const ev = await api.post<{ id: string; tipo: Tipo; momento: string }>(
         '/horario/quiosco/fichar',
-        { cif, identificador: identificador.trim().toUpperCase(), pin, tipo, origen: 'QUIOSCO' },
+        { cif, identificador: identificador.trim().toUpperCase(), pin, tipo },
       );
       // La hora que se muestra es la que ha sellado el servidor, no la del
       // terminal: es la que consta en el registro y puede ir desfasada.

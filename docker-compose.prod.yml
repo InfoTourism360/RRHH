@@ -47,6 +47,10 @@ services:
   api:
     build: { context: ., dockerfile: apps/api/Dockerfile }
     container_name: rrhh_api_prod
+    # Una sola instancia: el limite de peticiones por origen cuenta en memoria
+    # del proceso, asi que replicar duplicaria el margen sin avisar. Antes de
+    # escalar, el contador tiene que ir a un almacen compartido.
+    # El `container_name` fijo ya impide un `--scale` accidental.
     environment:
       <<: *secrets
       PORT: "3001"

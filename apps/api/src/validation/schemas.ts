@@ -92,7 +92,10 @@ export const ficharSchema = z
   })
   .strict();
 
+// El origen no se pide: un fichaje por esta vía es de quiosco por definición y
+// la ruta lo fija. Exigirlo al cliente daba a entender que se podía elegir.
 export const quioscoFicharSchema = ficharSchema
+  .omit({ origen: true })
   .extend({
     cif: z.string().min(1),
     identificador: z.string().min(1).optional(),
@@ -178,7 +181,7 @@ export const asignarSaldoSchema = z
 
 // ------------------------------ ACCESOS / USUARIOS --------------------------
 // Política de contraseñas documentada: mínimo 12 caracteres.
-const passwordSchema = z.string().min(12, 'La contraseña debe tener al menos 12 caracteres').max(200);
+export const passwordSchema = z.string().min(12, 'La contraseña debe tener al menos 12 caracteres').max(200);
 const rolSchema = z.enum(['ADMIN_ENTIDAD', 'GESTOR_PERSONAL', 'RESPONSABLE_UNIDAD', 'EMPLEADO', 'RLT']);
 
 /**

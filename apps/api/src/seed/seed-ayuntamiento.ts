@@ -6,6 +6,7 @@ import { crearFestivo } from '../domain/calendario.js';
 import { establecerPin } from '../auth/service.js';
 import { hashearPassword } from '../auth/passwords.js';
 import { generarNominaPDF } from '../domain/export/nomina.js';
+import { passwordSchema } from '../validation/schemas.js';
 
 // -----------------------------------------------------------------------------
 // SEED de datos realista (NO datos de producción; script de arranque de demo).
@@ -14,6 +15,11 @@ import { generarNominaPDF } from '../domain/export/nomina.js';
 // -----------------------------------------------------------------------------
 
 const CIF = 'P4600001A';
+
+// Las credenciales de la demo pasan por la misma politica que exige la API.
+// Antes eran de nueve caracteres: el propio producto las habria rechazado, y
+// eso es lo primero que mira quien viene a auditar.
+const PASSWORD_DEMO = passwordSchema.parse('Demostracion2026!');
 
 const NOMBRES = ['Lucía','Martín','Carmen','Javier','Ana','Sergio','Elena','Pablo','Marta','David',
   'Laura','Miguel','Sara','Jorge','Nuria','Raúl','Cristina','Iván','Rosa','Alberto',
@@ -57,7 +63,7 @@ async function main() {
   const ctx = { entidadId, usuarioId: null };
 
   // Usuario administrador (login de demo).
-  const hash = await hashearPassword('Demo1234!');
+  const hash = await hashearPassword(PASSWORD_DEMO);
   await ownerPool.query(
     `INSERT INTO usuario (entidad_id, email, password_hash) VALUES ($1, 'admin@demo.es', $2)`,
     [entidadId, hash],
@@ -228,7 +234,7 @@ async function main() {
 
   // --- Fase 4: un usuario EMPLEADO real (con persona) para el portal ---
   const empleado = creados[0]!; // primera persona creada
-  const hashEmp = await hashearPassword('Demo1234!');
+  const hashEmp = await hashearPassword(PASSWORD_DEMO);
   const ue = await ownerPool.query<{ id: string }>(
     `INSERT INTO usuario (entidad_id, persona_id, email, password_hash)
      VALUES ($1,$2,'empleado@demo.es',$3) RETURNING id`,
@@ -279,8 +285,8 @@ async function main() {
 
   console.log('Seed completado:', {
     entidad: 'Entidad de demostración', cif: CIF,
-    adminLogin: 'admin@demo.es / Demo1234!',
-    empleadoLogin: 'empleado@demo.es / Demo1234! (Quiosco: DNI 00000001R, PIN 1234)',
+    adminLogin: `admin@demo.es / ${PASSWORD_DEMO}`,
+    empleadoLogin: `empleado@demo.es / ${PASSWORD_DEMO} (Quiosco: DNI 00000001R, PIN 1234)`,
     ...resumen,
   });
 }

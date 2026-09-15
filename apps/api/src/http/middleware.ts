@@ -55,8 +55,22 @@ export function ctxDe(req: Request) {
  */
 export function registroActividad(req: Request, res: Response, next: NextFunction) {
   if (req.path === '/salud') return next();
+
+  // La ruta se fija AQUÍ, a la entrada, y a partir de `originalUrl`.
+  //
+  // `req.path` no sirve: al entrar en un router montado, Express recorta el
+  // prefijo de `req.url` y lo repone al salir, así que lo que se registraba
+  // dependía de en qué punto de la pila se hubiera respondido. El alta de un
+  // usuario quedaba como "POST /" y el quiosco aparecía unas veces como
+  // /quiosco/fichar y otras como /horario/quiosco/fichar. Un registro de
+  // actividad en el que no se distingue qué se hizo no sostiene una inspección.
+  //
+  // Se corta la cadena de consulta: lleva identificadores de personas y el
+  // registro no es sitio donde acumularlos.
+  const ruta = (req.originalUrl || req.url).split('?')[0] || '/';
+  const esLogin = ruta === '/auth/login';
+
   res.on('finish', () => {
-    const esLogin = req.path === '/auth/login';
     const accion = esLogin
       ? (res.statusCode < 400 ? 'LOGIN_OK' : 'LOGIN_FALLO')
       : (req.method === 'GET' ? 'ACCESO' : 'CAMBIO');
@@ -65,7 +79,7 @@ export function registroActividad(req: Request, res: Response, next: NextFunctio
       usuarioId: req.sesion?.usuarioId ?? null,
       accion,
       metodo: req.method,
-      ruta: req.path,
+      ruta,
       estadoHttp: res.statusCode,
       ip: req.ip ?? null,
       userAgent: req.header('user-agent') ?? null,

@@ -63,4 +63,10 @@ A la finalización, el Encargado, a elección del Responsable, **devolverá** o
 **suprimirá** los datos y las copias existentes, salvo obligación legal de
 conservación, conforme al [procedimiento de borrado seguro](../cumplimiento/borrado-seguro.md).
 
+> **Alcance real de la supresión.** Se ejecuta destruyendo la instancia, su
+> volumen de base de datos y las copias: es completa y verificable. Lo que el
+> sistema **no** hace todavía es la purga selectiva por vencimiento de plazos con
+> el servicio en marcha, que exige particionar las tablas append-only. Está
+> recogido en el procedimiento enlazado y no debe darse por disponible al firmar.
+
 Firmas: __________________  (Responsable)   __________________ (Encargado)

@@ -121,12 +121,17 @@ export function crearApp() {
   app.post('/estructura/puestos', requiereRol(...GESTION), validar(puestoSchema),
     h(async (req, res) => res.status(201).json(await est.crearPuesto(ctxDe(req), req.body))));
 
-  app.get('/estructura/personas', h(async (req, res) =>
+  // La ficha de personal lleva documento de identidad y contacto: es de
+  // gestión, no de consulta general. Sin esta guarda, cualquier empleado se
+  // descargaba el DNI de toda la plantilla.
+  app.get('/estructura/personas', requiereRol(...GESTION), h(async (req, res) =>
     res.json(await est.listarPersonas(ctxDe(req)))));
   app.post('/estructura/personas', requiereRol(...GESTION), validar(personaSchema),
     h(async (req, res) => res.status(201).json(await est.crearPersona(ctxDe(req), req.body))));
 
-  app.get('/estructura/relaciones', h(async (req, res) =>
+  // Igual que la RPT con ocupantes: la situación administrativa delata quién
+  // está en excedencia por cuidado de familiares, y eso no lo ve la plantilla.
+  app.get('/estructura/relaciones', requiereRol(...GESTION), h(async (req, res) =>
     res.json(await est.listarRelaciones(ctxDe(req), {
       personaId: req.query.personaId as string | undefined,
       puestoId: req.query.puestoId as string | undefined,
@@ -138,7 +143,9 @@ export function crearApp() {
   app.post('/estructura/relaciones/:id/situacion', requiereRol(...GESTION), validar(cambioSituacionSchema),
     h(async (req, res) => res.json(await est.cambiarSituacion(ctxDe(req), String(req.params.id), req.body))));
 
-  app.get('/estructura/auditoria/:tabla/:registroId', h(async (req, res) =>
+  // El historial guarda el antes y el después completos, más el motivo escrito
+  // a mano por quien resolvió: es material de gestión, no consultable por todos.
+  app.get('/estructura/auditoria/:tabla/:registroId', requiereRol(...GESTION), h(async (req, res) =>
     res.json(await est.historialAuditoria(ctxDe(req), String(req.params.tabla), String(req.params.registroId)))));
 
   // ------------------------------- RPT -------------------------------------

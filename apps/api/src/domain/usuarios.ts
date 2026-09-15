@@ -24,7 +24,17 @@ export function listarUsuarios(ctx: Contexto) {
                    FROM usuario_rol ur
                   WHERE ur.usuario_id = u.id
                     AND (ur.vigencia_hasta IS NULL OR ur.vigencia_hasta >= CURRENT_DATE)),
-                '{}') AS roles
+                '{}') AS roles,
+              COALESCE(
+                (SELECT jsonb_agg(jsonb_build_object(
+                          'rol', ur.rol_codigo,
+                          'unidadId', ur.unidad_id,
+                          'unidad', uo.denominacion) ORDER BY ur.rol_codigo)
+                   FROM usuario_rol ur
+                   LEFT JOIN unidad_organica uo ON uo.id = ur.unidad_id
+                  WHERE ur.usuario_id = u.id
+                    AND (ur.vigencia_hasta IS NULL OR ur.vigencia_hasta >= CURRENT_DATE)),
+                '[]'::jsonb) AS asignaciones
          FROM usuario u
          LEFT JOIN persona p ON p.id = u.persona_id
         ORDER BY u.email`,
@@ -35,11 +45,17 @@ export function listarUsuarios(ctx: Contexto) {
 
 interface UsuarioCreado { id: string; email: string; persona_id: string | null; activo: boolean }
 
+/** Rol asignado, acotado a una unidad cuando el rol lo requiere. */
+export interface AsignacionRol {
+  rol: string;
+  unidadId: string | null;
+}
+
 export interface UsuarioInput {
   email: string;
   password: string;
   personaId?: string | null;
-  roles: string[];
+  roles: AsignacionRol[];
 }
 
 export function crearUsuario(ctx: Contexto, d: UsuarioInput) {
@@ -68,11 +84,11 @@ export function crearUsuario(ctx: Contexto, d: UsuarioInput) {
       throw err;
     }
 
-    for (const rol of d.roles) {
+    for (const a of d.roles) {
       await ej.query(
-        `INSERT INTO usuario_rol (entidad_id, usuario_id, rol_codigo)
-         VALUES (app_entidad_id(), $1, $2) ON CONFLICT DO NOTHING`,
-        [creado.id, rol],
+        `INSERT INTO usuario_rol (entidad_id, usuario_id, rol_codigo, unidad_id)
+         VALUES (app_entidad_id(), $1, $2, $3) ON CONFLICT DO NOTHING`,
+        [creado.id, a.rol, a.unidadId],
       );
     }
 
@@ -122,15 +138,16 @@ export function restablecerPassword(ctx: Contexto, id: string, password: string)
 }
 
 /** Sustituye el conjunto de roles vigentes del usuario. */
-export function fijarRoles(ctx: Contexto, id: string, roles: string[]) {
+export function fijarRoles(ctx: Contexto, id: string, roles: AsignacionRol[]) {
   return conTenant(ctx, async (ej) => {
     const antes = (await ej.query(
-      'SELECT rol_codigo FROM usuario_rol WHERE usuario_id = $1', [id])).rows.map((x) => x.rol_codigo);
+      'SELECT rol_codigo, unidad_id FROM usuario_rol WHERE usuario_id = $1', [id]))
+      .rows.map((x) => ({ rol: x.rol_codigo, unidadId: x.unidad_id }));
     await ej.query('DELETE FROM usuario_rol WHERE usuario_id = $1', [id]);
-    for (const rol of roles) {
+    for (const a of roles) {
       await ej.query(
-        `INSERT INTO usuario_rol (entidad_id, usuario_id, rol_codigo)
-         VALUES (app_entidad_id(), $1, $2)`, [id, rol]);
+        `INSERT INTO usuario_rol (entidad_id, usuario_id, rol_codigo, unidad_id)
+         VALUES (app_entidad_id(), $1, $2, $3)`, [id, a.rol, a.unidadId]);
     }
     await registrarAuditoria(ej, ctx.entidadId, {
       accion: 'MODIFICAR_ROLES', tabla: 'usuario', registroId: id,

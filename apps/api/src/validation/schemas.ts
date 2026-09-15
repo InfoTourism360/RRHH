@@ -181,16 +181,33 @@ export const asignarSaldoSchema = z
 const passwordSchema = z.string().min(12, 'La contraseña debe tener al menos 12 caracteres').max(200);
 const rolSchema = z.enum(['ADMIN_ENTIDAD', 'GESTOR_PERSONAL', 'RESPONSABLE_UNIDAD', 'EMPLEADO', 'RLT']);
 
+/**
+ * Un rol puede venir como código suelto o acompañado de la unidad a la que
+ * acota. Se exige la unidad al responsable: sin ella no tendría competencia
+ * sobre nadie y quedaría un cargo decorativo que no puede resolver nada.
+ */
+const asignacionRolSchema = z
+  .union([
+    rolSchema.transform((rol) => ({ rol, unidadId: null as string | null })),
+    z
+      .object({ rol: rolSchema, unidadId: z.string().uuid().nullable().optional() })
+      .strict()
+      .transform((a) => ({ rol: a.rol, unidadId: a.unidadId ?? null })),
+  ])
+  .refine((a) => a.rol !== 'RESPONSABLE_UNIDAD' || a.unidadId !== null, {
+    message: 'El responsable de unidad necesita la unidad que tiene a su cargo.',
+  });
+
 export const usuarioSchema = z
   .object({
     email: z.string().email(),
     password: passwordSchema,
     personaId: z.string().uuid().nullable().optional(),
-    roles: z.array(rolSchema).min(1, 'Asigna al menos un rol'),
+    roles: z.array(asignacionRolSchema).min(1, 'Asigna al menos un rol'),
   })
   .strict();
 
-export const rolesSchema = z.object({ roles: z.array(rolSchema) }).strict();
+export const rolesSchema = z.object({ roles: z.array(asignacionRolSchema) }).strict();
 export const passwordResetSchema = z.object({ password: passwordSchema }).strict();
 export const estadoUsuarioSchema = z
   .object({ activo: z.boolean(), motivo: z.string().min(3).max(500) })

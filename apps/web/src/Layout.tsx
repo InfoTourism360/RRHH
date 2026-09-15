@@ -38,11 +38,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [abierto, setAbierto] = useState(false);
   const esGestion = !!yo?.roles.some((r) => ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'].includes(r.rol));
   const esAdmin = !!yo?.roles.some((r) => r.rol === 'ADMIN_ENTIDAD');
+  const esResponsable = !!yo?.roles.some((r) => r.rol === 'RESPONSABLE_UNIDAD');
   // "Accesos" solo lo ve el administrador: repartir credenciales no es del gestor.
+  // El responsable de unidad no es gestión, pero sí resuelve las ausencias de
+  // su gente, así que a su menú de empleado se le añade "Aprobaciones".
   const nav = esGestion
     ? (esAdmin ? NAV_GESTION : NAV_GESTION.filter((e) => e.a !== '/accesos'))
-    : NAV_EMPLEADO;
-  const rolTxt = esGestion ? 'Gestión de personal' : 'Empleado';
+    : esResponsable
+      ? [...NAV_EMPLEADO, { a: '/aprobaciones', txt: 'Aprobaciones', Ico: IcoAprobar }]
+      : NAV_EMPLEADO;
+  const rolTxt = esGestion ? 'Gestión de personal' : esResponsable ? 'Responsable de unidad' : 'Empleado';
 
   useEffect(() => { mainRef.current?.focus(); setAbierto(false); }, [loc.pathname]);
 

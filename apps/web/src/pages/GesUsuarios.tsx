@@ -5,14 +5,24 @@ import {
   Buscador, filtrar, CabeceraPagina, type Columna,
 } from '../ui';
 
+/** Un rol, con la unidad a la que acota cuando el rol lo exige. */
+interface Asignacion { rol: string; unidadId: string | null; unidad?: string | null }
+
 interface Usuario {
   id: string; email: string; persona_id: string | null; activo: boolean;
   mfa_activo: boolean; tiene_pin: boolean; bloqueado_hasta: string | null;
   nombre: string | null; apellido1: string | null; apellido2: string | null; num_documento: string | null;
   roles: string[];
+  asignaciones: Asignacion[];
 }
 interface Persona { id: string; nombre: string; apellido1: string; apellido2: string | null; num_documento: string }
 interface Rol { codigo: string; denominacion: string }
+interface Unidad { id: string; denominacion: string }
+
+/** Roles que no mandan sobre nadie si no se les dice sobre qué unidad. */
+const EXIGEN_UNIDAD = ['RESPONSABLE_UNIDAD'];
+const faltaUnidad = (a: Asignacion[]) =>
+  a.some((x) => EXIGEN_UNIDAD.includes(x.rol) && !x.unidadId);
 
 type Dialogo =
   | { t: 'nuevo' }
@@ -22,30 +32,35 @@ type Dialogo =
   | { t: 'estado'; u: Usuario }
   | null;
 
-const VACIO = { email: '', password: '', personaId: '', roles: ['EMPLEADO'] as string[] };
+const VACIO = {
+  email: '', password: '', personaId: '',
+  roles: [{ rol: 'EMPLEADO', unidadId: null }] as Asignacion[],
+};
 
 export function GesUsuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[] | null>(null);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [roles, setRoles] = useState<Rol[]>([]);
+  const [unidades, setUnidades] = useState<Unidad[]>([]);
   const [q, setQ] = useState('');
   const [dlg, setDlg] = useState<Dialogo>(null);
   const [msg, setMsg] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
 
   // Formularios
   const [nuevo, setNuevo] = useState(VACIO);
-  const [rolesSel, setRolesSel] = useState<string[]>([]);
+  const [rolesSel, setRolesSel] = useState<Asignacion[]>([]);
   const [pass, setPass] = useState('');
   const [pin, setPin] = useState('');
   const [motivo, setMotivo] = useState('');
 
   const cargar = useCallback(async () => {
-    const [u, p, r] = await Promise.all([
+    const [u, p, r, un] = await Promise.all([
       api.get<Usuario[]>('/admin/usuarios').catch(() => [] as Usuario[]),
       api.get<Persona[]>('/estructura/personas').catch(() => [] as Persona[]),
       api.get<Rol[]>('/admin/usuarios/roles').catch(() => [] as Rol[]),
+      api.get<Unidad[]>('/estructura/unidades').catch(() => [] as Unidad[]),
     ]);
-    setUsuarios(u); setPersonas(p); setRoles(r);
+    setUsuarios(u); setPersonas(p); setRoles(r); setUnidades(un);
   }, []);
   useEffect(() => { void cargar(); }, [cargar]);
 
@@ -126,8 +141,12 @@ export function GesUsuarios() {
       k: 'roles', txt: 'Roles',
       render: (u) => (
         <div className="flex flex-wrap gap-1.5">
-          {u.roles.length === 0 ? <span className="text-tenue text-xs">sin roles</span>
-            : u.roles.map((r) => <Etiqueta key={r} tono="marca">{r}</Etiqueta>)}
+          {u.asignaciones.length === 0 ? <span className="text-tenue text-xs">sin roles</span>
+            : u.asignaciones.map((a) => (
+                <Etiqueta key={`${a.rol}-${a.unidadId ?? ''}`} tono="marca">
+                  {a.unidad ? `${a.rol} · ${a.unidad}` : a.rol}
+                </Etiqueta>
+              ))}
         </div>
       ),
     },
@@ -146,7 +165,7 @@ export function GesUsuarios() {
       k: 'acc', txt: '', alinear: 'der',
       render: (u) => (
         <div className="flex flex-wrap gap-3 justify-end">
-          <button onClick={() => { setRolesSel(u.roles); setDlg({ t: 'roles', u }); }}
+          <button onClick={() => { setRolesSel(u.asignaciones); setDlg({ t: 'roles', u }); }}
                   className="text-sm font-semibold text-marca-700 underline">Roles</button>
           <button onClick={() => setDlg({ t: 'password', u })}
                   className="text-sm font-semibold text-marca-700 underline">Contraseña</button>
@@ -161,20 +180,47 @@ export function GesUsuarios() {
     },
   ];
 
-  function Casillas({ valor, onCambio }: { valor: string[]; onCambio: (v: string[]) => void }) {
+  function Casillas({ valor, onCambio }: { valor: Asignacion[]; onCambio: (v: Asignacion[]) => void }) {
+    const puesta = (codigo: string) => valor.find((x) => x.rol === codigo);
     return (
       <fieldset className="mb-4">
         <legend className="text-sm font-semibold mb-2">Roles</legend>
-        {roles.map((r) => (
-          <label key={r.codigo} className="flex items-center gap-2.5 py-1.5 text-sm">
-            <input type="checkbox" checked={valor.includes(r.codigo)}
-                   onChange={(e) => onCambio(e.target.checked
-                     ? [...valor, r.codigo]
-                     : valor.filter((x) => x !== r.codigo))}
-                   className="w-4 h-4 rounded border-linea text-marca-600 focus:ring-marca-500" />
-            <span>{r.denominacion} <span className="text-tenue text-xs">({r.codigo})</span></span>
-          </label>
-        ))}
+        {roles.map((r) => {
+          const marcada = puesta(r.codigo);
+          const exigeUnidad = EXIGEN_UNIDAD.includes(r.codigo);
+          return (
+            <div key={r.codigo} className="py-1.5">
+              <label className="flex items-center gap-2.5 text-sm">
+                <input type="checkbox" checked={!!marcada}
+                       onChange={(e) => onCambio(e.target.checked
+                         ? [...valor, { rol: r.codigo, unidadId: null }]
+                         : valor.filter((x) => x.rol !== r.codigo))}
+                       className="w-4 h-4 rounded border-linea text-marca-600 focus:ring-marca-500" />
+                <span>{r.denominacion} <span className="text-tenue text-xs">({r.codigo})</span></span>
+              </label>
+              {marcada && exigeUnidad && (
+                <div className="ml-7 mt-2">
+                  <Selector etiqueta="Unidad a su cargo" value={marcada.unidadId ?? ''}
+                            onChange={(e) => onCambio(valor.map((x) => x.rol === r.codigo
+                              ? { ...x, unidadId: e.target.value || null } : x))}>
+                    <option value="">Selecciona una unidad…</option>
+                    {unidades.map((u) => (
+                      <option key={u.id} value={u.id}>{u.denominacion}</option>
+                    ))}
+                  </Selector>
+                  <p className="text-xs text-tenue -mt-2">
+                    Solo resolverá lo de esta unidad y las que cuelguen de ella.
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {faltaUnidad(valor) && (
+          <p className="text-sm text-error mt-1">
+            Indica la unidad a cargo del responsable: sin ella no podría resolver nada.
+          </p>
+        )}
       </fieldset>
     );
   }
@@ -216,7 +262,9 @@ export function GesUsuarios() {
             <Casillas valor={nuevo.roles} onCambio={(v) => setNuevo({ ...nuevo, roles: v })} />
             <div className="flex justify-end gap-2">
               <Boton variante="secundario" type="button" onClick={() => setDlg(null)}>Cancelar</Boton>
-              <Boton type="submit" disabled={nuevo.roles.length === 0}>Crear acceso</Boton>
+              <Boton type="submit" disabled={nuevo.roles.length === 0 || faltaUnidad(nuevo.roles)}>
+                Crear acceso
+              </Boton>
             </div>
           </form>
         </Modal>
@@ -228,7 +276,7 @@ export function GesUsuarios() {
             <Casillas valor={rolesSel} onCambio={setRolesSel} />
             <div className="flex justify-end gap-2">
               <Boton variante="secundario" type="button" onClick={() => setDlg(null)}>Cancelar</Boton>
-              <Boton type="submit">Guardar</Boton>
+              <Boton type="submit" disabled={faltaUnidad(rolesSel)}>Guardar</Boton>
             </div>
           </form>
         </Modal>

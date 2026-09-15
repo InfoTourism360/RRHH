@@ -15,7 +15,7 @@ describe('Gestión de accesos', () => {
     });
 
     const creado = await usr.crearUsuario(ctx, {
-      email: 'nuevo@demo.es', password: PASS, personaId: p.id as string, roles: ['EMPLEADO'],
+      email: 'nuevo@demo.es', password: PASS, personaId: p.id as string, roles: [{ rol: 'EMPLEADO', unidadId: null }],
     });
     expect(creado.id).toBeTruthy();
 
@@ -28,8 +28,8 @@ describe('Gestión de accesos', () => {
   it('no permite dos usuarios con el mismo correo en la entidad', async () => {
     const a = await crearEntidadDemo('USR2');
     const ctx = { entidadId: a.entidadId, usuarioId: a.adminUsuarioId };
-    await usr.crearUsuario(ctx, { email: 'dup@demo.es', password: PASS, roles: ['EMPLEADO'] });
-    await expect(usr.crearUsuario(ctx, { email: 'dup@demo.es', password: PASS, roles: ['EMPLEADO'] }))
+    await usr.crearUsuario(ctx, { email: 'dup@demo.es', password: PASS, roles: [{ rol: 'EMPLEADO', unidadId: null }] });
+    await expect(usr.crearUsuario(ctx, { email: 'dup@demo.es', password: PASS, roles: [{ rol: 'EMPLEADO', unidadId: null }] }))
       .rejects.toMatchObject({ codigo: 'EMAIL_DUPLICADO' });
   });
 
@@ -39,15 +39,15 @@ describe('Gestión de accesos', () => {
     const p = await est.crearPersona(ctx, {
       tipoDocumento: 'DNI', numDocumento: '30000003C', nombre: 'Una', apellido1: 'Sola',
     });
-    await usr.crearUsuario(ctx, { email: 'p1@demo.es', password: PASS, personaId: p.id as string, roles: ['EMPLEADO'] });
-    await expect(usr.crearUsuario(ctx, { email: 'p2@demo.es', password: PASS, personaId: p.id as string, roles: ['EMPLEADO'] }))
+    await usr.crearUsuario(ctx, { email: 'p1@demo.es', password: PASS, personaId: p.id as string, roles: [{ rol: 'EMPLEADO', unidadId: null }] });
+    await expect(usr.crearUsuario(ctx, { email: 'p2@demo.es', password: PASS, personaId: p.id as string, roles: [{ rol: 'EMPLEADO', unidadId: null }] }))
       .rejects.toMatchObject({ codigo: 'PERSONA_CON_ACCESO' });
   });
 
   it('desactivar impide el acceso, y no puedes desactivarte a ti mismo', async () => {
     const a = await crearEntidadDemo('USR4');
     const ctx = { entidadId: a.entidadId, usuarioId: a.adminUsuarioId };
-    const u = await usr.crearUsuario(ctx, { email: 'baja@demo.es', password: PASS, roles: ['EMPLEADO'] });
+    const u = await usr.crearUsuario(ctx, { email: 'baja@demo.es', password: PASS, roles: [{ rol: 'EMPLEADO', unidadId: null }] });
 
     await usr.cambiarEstado(ctx, u.id as string, false, 'Cese de la relación de servicio');
     await expect(login({ cif: a.cif, email: 'baja@demo.es', password: PASS }))
@@ -63,7 +63,7 @@ describe('Gestión de accesos', () => {
     const ctxA = { entidadId: a.entidadId, usuarioId: a.adminUsuarioId };
     const ctxB = { entidadId: b.entidadId, usuarioId: b.adminUsuarioId };
 
-    const deB = await usr.crearUsuario(ctxB, { email: 'solo-b@demo.es', password: PASS, roles: ['EMPLEADO'] });
+    const deB = await usr.crearUsuario(ctxB, { email: 'solo-b@demo.es', password: PASS, roles: [{ rol: 'EMPLEADO', unidadId: null }] });
 
     const listaA = await usr.listarUsuarios(ctxA);
     expect(listaA.some((u) => u.email === 'solo-b@demo.es')).toBe(false);
@@ -76,7 +76,7 @@ describe('Gestión de accesos', () => {
   it('restablecer la contraseña desbloquea y no guarda la contraseña en el log', async () => {
     const a = await crearEntidadDemo('USR7');
     const ctx = { entidadId: a.entidadId, usuarioId: a.adminUsuarioId };
-    const u = await usr.crearUsuario(ctx, { email: 'reset@demo.es', password: PASS, roles: ['EMPLEADO'] });
+    const u = await usr.crearUsuario(ctx, { email: 'reset@demo.es', password: PASS, roles: [{ rol: 'EMPLEADO', unidadId: null }] });
 
     const NUEVA = 'OtraContraseña2026';
     await usr.restablecerPassword(ctx, u.id as string, NUEVA);

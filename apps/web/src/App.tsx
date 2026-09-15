@@ -45,6 +45,9 @@ export function App() {
 
   const esGestion = yo.roles.some((r) => ['ADMIN_ENTIDAD', 'GESTOR_PERSONAL'].includes(r.rol));
   const esAdmin = yo.roles.some((r) => r.rol === 'ADMIN_ENTIDAD');
+  // El responsable de unidad resuelve las ausencias de su gente: necesita la
+  // pantalla de aprobaciones aunque no sea gestión de personal.
+  const esAprobador = esGestion || yo.roles.some((r) => r.rol === 'RESPONSABLE_UNIDAD');
 
   return (
     <Layout>
@@ -54,7 +57,7 @@ export function App() {
         {esGestion && <Route path="/plantilla" element={<GesPlantilla />} />}
         {esGestion && <Route path="/rpt" element={<GesRPT />} />}
         {esGestion && <Route path="/control-horario" element={<GesHorario />} />}
-        {esGestion && <Route path="/aprobaciones" element={<GesAusencias />} />}
+        {esAprobador && <Route path="/aprobaciones" element={<GesAusencias />} />}
         {esGestion && <Route path="/publicaciones" element={<GesDocumentos />} />}
         {esGestion && <Route path="/configuracion" element={<GesConfiguracion />} />}
         {esGestion && <Route path="/actividad" element={<GesActividad />} />}

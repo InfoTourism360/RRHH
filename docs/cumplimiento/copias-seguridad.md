@@ -27,4 +27,10 @@ Recomendado: trimestral. Plantilla:
 
 | Fecha | Fichero | Hash verificado | Restauración OK | Recuentos coherentes | Responsable |
 |---|---|---|---|---|---|
-|  |  |  |  |  |  |
+| 2026-09-24 | `rrhh_20260924_090109.dump` | Sí (`6da101fce6932178e7509fdb7baff0f3b376a3c16aa0ad6111290a26b5143f87`) | Sí | Sí | Equipo de desarrollo |
+
+> La primera ejecución encontró el procedimiento **roto**: `backup.sh` escribía
+> el hash con la ruta de invocación y `restore.sh` lo verificaba desde el
+> directorio de la copia, así que la comprobación de integridad fallaba siempre
+> y el script abortaba antes de restaurar. Corregido. Es la razón de ser de esta
+> prueba: un procedimiento que nadie ha ejecutado no es un procedimiento.

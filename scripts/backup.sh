@@ -13,10 +13,16 @@ FICHERO="$DEST/rrhh_${STAMP}.dump"
 docker exec rrhh_db pg_dump -U rrhh_owner -d rrhh -F c > "$FICHERO"
 
 # Hash de integridad de la copia.
+#
+# Se escribe con el nombre a secas, no con la ruta con la que se invocó el
+# script: si lleva la ruta, la verificación solo funciona desde el directorio
+# exacto desde el que se hizo la copia. La prueba de restauración fallaba por
+# esto y nadie se había enterado porque nunca se había ejecutado.
+NOMBRE="$(basename "$FICHERO")"
 if command -v sha256sum >/dev/null 2>&1; then
-  sha256sum "$FICHERO" > "$FICHERO.sha256"
+  (cd "$DEST" && sha256sum "$NOMBRE" > "$NOMBRE.sha256")
 else
-  shasum -a 256 "$FICHERO" > "$FICHERO.sha256"
+  (cd "$DEST" && shasum -a 256 "$NOMBRE" > "$NOMBRE.sha256")
 fi
 
 echo "Copia creada: $FICHERO"

@@ -16,3 +16,9 @@ Thumbs.db
 .env.prod
 certs/*
 !certs/.gitkeep
+
+# Copias de seguridad: un volcado lleva los datos personales de toda la
+# plantilla. Nunca al control de versiones.
+backups/
+*.dump
+*.dump.sha256

@@ -1,5 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
-import { login, logout, ErrorAuth } from '../auth/service.js';
+import {
+  login, logout, ErrorAuth, iniciarAltaMfa, confirmarAltaMfa, desactivarMfa, tieneMfaActivo,
+} from '../auth/service.js';
 import { ErrorDominio } from '../domain/estructura.js';
 import * as est from '../domain/estructura.js';
 import { ctxDe, requiereRol, requiereSesion, validar, registroActividad } from './middleware.js';
@@ -17,6 +19,7 @@ import { rutasUsuarios } from './usuarios.js';
 import { limitarPorOrigen } from './limites.js';
 import {
   cambioSituacionSchema, ceseSchema, loginSchema, personaSchema,
+  mfaConfirmarSchema, mfaDesactivarSchema,
   plazaSchema, puestoSchema, relacionSchema, unidadSchema,
 } from '../validation/schemas.js';
 
@@ -91,8 +94,34 @@ export function crearApp() {
   }));
 
   app.get('/auth/yo', requiereSesion, h(async (req, res) => {
-    res.json({ entidadId: req.sesion!.entidadId, usuarioId: req.sesion!.usuarioId, roles: req.sesion!.roles });
+    res.json({
+      entidadId: req.sesion!.entidadId,
+      usuarioId: req.sesion!.usuarioId,
+      roles: req.sesion!.roles,
+      mfaActivo: await tieneMfaActivo(req.sesion!.usuarioId),
+    });
   }));
+
+  // ------------------------ SEGUNDO FACTOR (TOTP) --------------------------
+  // Alta en dos pasos: entre generar la semilla y confirmarla con un código el
+  // factor no queda activo, para que nadie se quede fuera de su propia cuenta
+  // por no haber llegado a escanear el QR.
+  app.post('/auth/mfa/iniciar', requiereSesion, h(async (req, res) =>
+    res.json(await iniciarAltaMfa(req.sesion!.usuarioId))));
+
+  app.post('/auth/mfa/confirmar', requiereSesion, validar(mfaConfirmarSchema),
+    h(async (req, res) => {
+      await confirmarAltaMfa(req.sesion!.usuarioId, req.body.codigo);
+      res.status(204).end();
+    }));
+
+  // La baja pide la contraseña: retirar una medida de seguridad no puede
+  // depender solo de tener la sesión abierta.
+  app.post('/auth/mfa/desactivar', requiereSesion, validar(mfaDesactivarSchema),
+    h(async (req, res) => {
+      await desactivarMfa(req.sesion!.usuarioId, req.body.password);
+      res.status(204).end();
+    }));
 
   // ----------------------- CUADRO DE MANDO (gestión) -----------------------
   app.get('/admin/panel', requiereSesion, requiereRol('ADMIN_ENTIDAD', 'GESTOR_PERSONAL'),

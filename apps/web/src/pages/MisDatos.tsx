@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Cargando, Tarjeta, Etiqueta, CabeceraPagina } from '../ui';
 import { TIPOS_RELACION, SITUACIONES, etiqueta } from '../catalogos';
+import { SegundoFactor } from '../SegundoFactor';
+import { useAuth } from '../auth';
 
 interface Datos {
   persona: {
@@ -24,6 +26,7 @@ function Dato({ etiqueta: et, valor }: { etiqueta: string; valor: React.ReactNod
 }
 
 export function MisDatos() {
+  const { yo, refrescar } = useAuth();
   const [d, setD] = useState<Datos | null>(null);
   useEffect(() => {
     api.get<Datos>('/portal/mis-datos').then(setD).catch(() => setD({ persona: null, puesto: null }));
@@ -61,10 +64,11 @@ export function MisDatos() {
             </dl>
           ) : <p className="text-apagado">Sin relación de servicio vigente.</p>}
         </Tarjeta>
+        <SegundoFactor activo={!!yo?.mfaActivo} onCambio={refrescar} />
       </div>
 
       <p className="mt-4 text-sm text-apagado">
-        Estos datos son de solo lectura. Para modificarlos, dirígete a Recursos Humanos: cualquier
+        Tu ficha es de solo lectura. Para modificarla, dirígete a Recursos Humanos: cualquier
         cambio queda registrado en el histórico de la entidad.
       </p>
     </div>

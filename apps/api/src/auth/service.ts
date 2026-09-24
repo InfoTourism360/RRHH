@@ -1,8 +1,8 @@
 import { ownerPool } from '../db/pool.js';
 import { env } from '../config/env.js';
 import { hashearPassword, verificarPassword } from './passwords.js';
-import { verificarTotp } from './mfa.js';
-import { descifrar } from './crypto.js';
+import { generarSecretoTotp, uriTotp, verificarTotp } from './mfa.js';
+import { cifrar, descifrar } from './crypto.js';
 import { hashToken, nuevoToken } from './tokens.js';
 
 /**
@@ -197,6 +197,85 @@ async function registrarFalloPin(usuarioId: string, intentosPrevios: number): Pr
                                        ELSE pin_bloqueado_hasta END
       WHERE id = $1`,
     [usuarioId, intentos, bloquear, String(env.BLOQUEO_PIN_MINUTOS)],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Alta del segundo factor (TOTP). El login sabía comprobarlo desde el principio
+// pero no existía forma de activarlo: la semilla no se generaba nunca y
+// `mfa_activo` se quedaba en false para siempre. El anexo ENS lo daba por
+// disponible, así que era una casilla marcada sin nada detrás.
+//
+// El alta va en dos pasos a propósito. Entre generar la semilla y confirmarla
+// con un código el factor NO queda activo: si se activara al generarla, quien
+// no llegue a escanear el QR se queda fuera de su cuenta sin haber hecho nada.
+// ---------------------------------------------------------------------------
+
+/** ¿Tiene el usuario el segundo factor activo? Lo necesita la interfaz. */
+export async function tieneMfaActivo(usuarioId: string): Promise<boolean> {
+  const r = await ownerPool.query<{ mfa_activo: boolean }>(
+    'SELECT mfa_activo FROM usuario WHERE id = $1',
+    [usuarioId],
+  );
+  return r.rows[0]?.mfa_activo ?? false;
+}
+
+/** Paso 1: genera la semilla y la guarda en provisional (`mfa_activo` false). */
+export async function iniciarAltaMfa(
+  usuarioId: string,
+): Promise<{ secreto: string; uri: string }> {
+  const u = await ownerPool.query<{ email: string; mfa_activo: boolean }>(
+    'SELECT email, mfa_activo FROM usuario WHERE id = $1',
+    [usuarioId],
+  );
+  const usuario = u.rows[0];
+  if (!usuario) throw new ErrorAuth('NO_ENCONTRADO', 'Usuario no encontrado.');
+  if (usuario.mfa_activo) {
+    throw new ErrorAuth('MFA_YA_ACTIVO', 'Ya tienes el segundo factor activo. Desactívalo antes de volver a darlo de alta.');
+  }
+  const secreto = generarSecretoTotp();
+  await ownerPool.query(
+    'UPDATE usuario SET mfa_totp_secret = $2, mfa_activo = false WHERE id = $1',
+    [usuarioId, cifrar(secreto)],
+  );
+  return { secreto, uri: uriTotp(secreto, usuario.email) };
+}
+
+/** Paso 2: comprueba un código de la semilla provisional y la deja activa. */
+export async function confirmarAltaMfa(usuarioId: string, codigo: string): Promise<void> {
+  const u = await ownerPool.query<{ mfa_totp_secret: Buffer | null; mfa_activo: boolean }>(
+    'SELECT mfa_totp_secret, mfa_activo FROM usuario WHERE id = $1',
+    [usuarioId],
+  );
+  const usuario = u.rows[0];
+  if (!usuario?.mfa_totp_secret) {
+    throw new ErrorAuth('MFA_SIN_INICIAR', 'No hay ningún alta de segundo factor en curso.');
+  }
+  if (usuario.mfa_activo) throw new ErrorAuth('MFA_YA_ACTIVO', 'El segundo factor ya está activo.');
+  if (!verificarTotp(descifrar(usuario.mfa_totp_secret), codigo)) {
+    throw new ErrorAuth('MFA_INVALIDO', 'El código no es válido. Comprueba la hora de tu dispositivo.');
+  }
+  await ownerPool.query('UPDATE usuario SET mfa_activo = true WHERE id = $1', [usuarioId]);
+}
+
+/**
+ * Baja del segundo factor. Exige la contraseña: quitar una medida de seguridad
+ * no puede depender solo de tener la sesión abierta, que es justo lo que un
+ * atacante ya tendría si ha llegado hasta aquí.
+ */
+export async function desactivarMfa(usuarioId: string, password: string): Promise<void> {
+  const u = await ownerPool.query<{ password_hash: string }>(
+    'SELECT password_hash FROM usuario WHERE id = $1',
+    [usuarioId],
+  );
+  const usuario = u.rows[0];
+  if (!usuario) throw new ErrorAuth('NO_ENCONTRADO', 'Usuario no encontrado.');
+  if (!(await verificarPassword(usuario.password_hash, password))) {
+    throw new ErrorAuth('CREDENCIALES', 'La contraseña no es correcta.');
+  }
+  await ownerPool.query(
+    'UPDATE usuario SET mfa_activo = false, mfa_totp_secret = NULL WHERE id = $1',
+    [usuarioId],
   );
 }
 

@@ -123,7 +123,7 @@ scripts/restore.sh ./backups/rrhh_XXXX.dump       # prueba de restauración en B
   con encadenamiento de hash. Es la base del registro horario digital (Fase 2).
 - **Histórico**: modelo `PLAZA → PUESTO → OCUPANTE` con vigencias; la vacancia y la
   reserva de puesto son estados **derivados**, nunca sobrescritos.
-- **Auth propia**: Argon2id, sesiones opacas (se guarda el hash), MFA TOTP opcional,
+- **Auth propia**: Argon2id, sesiones opacas (se guarda el hash), MFA TOTP opcional (se activa desde «Mis datos», con alta en dos pasos),
   bloqueo por intentos y expiración/rotación.
 
 ## Notas

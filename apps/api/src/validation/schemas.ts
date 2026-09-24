@@ -218,6 +218,11 @@ export const usuarioSchema = z
   .strict();
 
 export const rolesSchema = z.object({ roles: z.array(asignacionRolSchema) }).strict();
+
+// Segundo factor. La baja pide la contraseña, no un código: si el usuario ha
+// perdido el dispositivo, un código es justo lo que no puede aportar.
+export const mfaConfirmarSchema = z.object({ codigo: z.string().regex(/^\d{6}$/) }).strict();
+export const mfaDesactivarSchema = z.object({ password: z.string().min(1).max(200) }).strict();
 export const passwordResetSchema = z.object({ password: passwordSchema }).strict();
 export const estadoUsuarioSchema = z
   .object({ activo: z.boolean(), motivo: z.string().min(3).max(500) })

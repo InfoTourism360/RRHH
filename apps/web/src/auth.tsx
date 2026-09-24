@@ -2,7 +2,10 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { api, setToken, getToken, EVENTO_SESION_CADUCADA } from './api';
 
 export interface Rol { rol: string; unidadId: string | null }
-interface Yo { entidadId: string; usuarioId: string; personaId: string | null; roles: Rol[] }
+interface Yo {
+  entidadId: string; usuarioId: string; personaId: string | null; roles: Rol[];
+  mfaActivo: boolean;
+}
 
 interface AuthCtx {
   caducada: boolean;
@@ -10,6 +13,8 @@ interface AuthCtx {
   cargando: boolean;
   entrar: (cif: string, email: string, password: string, totp?: string) => Promise<void>;
   salir: () => Promise<void>;
+  /** Relee la sesión: lo usa la pantalla que activa o desactiva el segundo factor. */
+  refrescar: () => Promise<void>;
   tieneRol: (...roles: string[]) => boolean;
 }
 
@@ -50,8 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setYo(null);
   };
 
+  const refrescar = async () => {
+    try { setYo(await api.get<Yo>('/auth/yo')); } catch { /* la sesión ya se gestiona en el 401 */ }
+  };
+
   const valor = useMemo<AuthCtx>(() => ({
-    yo, cargando, caducada, entrar, salir,
+    yo, cargando, caducada, entrar, salir, refrescar,
     tieneRol: (...roles) => !!yo?.roles.some((r) => roles.includes(r.rol)),
   }), [yo, cargando, caducada]);
 

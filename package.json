@@ -17,6 +17,7 @@
     "test": "npm run test -w @rrhh/api",
     "dev:api": "npm run dev -w @rrhh/api",
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "alta-entidad": "npm run alta-entidad -w @rrhh/api --"
   }
 }

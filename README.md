@@ -56,6 +56,22 @@ Logins de demo tras el seed (CIF `P4600001A`):
 - Administrador: `admin@demo.es` / `Demostracion2026!` (cuadro de mando + back-office)
 - Empleado (portal): `empleado@demo.es` / `Demostracion2026!` (Quiosco: DNI `00000001R` o `empleado@demo.es`, PIN `1234`)
 
+## Alta de una entidad nueva
+
+```bash
+npm run alta-entidad -- --cif P1234567D --nombre "Ayuntamiento de X" --admin secretaria@ayuntamiento.es
+```
+
+Crea la entidad, su primer administrador con una contraseña generada —se muestra
+una sola vez— y el catálogo de ausencias del TREBEP. Queda registrado en el log
+de actividad.
+
+Es un script del **operador**, no una ruta de la API, y es deliberado: crear una
+entidad está por encima de cualquier entidad, así que exponerlo por HTTP
+obligaría a inventar un usuario capaz de cruzar los límites del tenant. Quien
+opera el despliegue ya tiene acceso a la base; no hace falta abrirle además una
+puerta en la aplicación.
+
 ## Qué puede hacer cada rol
 
 **Empleado** — fichar (widget con estado dentro/fuera/pausa), consultar su jornada con

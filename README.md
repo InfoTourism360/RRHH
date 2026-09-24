@@ -68,7 +68,7 @@ unidades, plazas, puestos y ocupación, con búsqueda); **control horario** por 
 **correcciones trazadas** e informes; aprobación de ausencias con denegación motivada;
 **alta de usuarios y reparto de roles** (solo administrador); publicación de documentos
 y acuses; **configuración del motor de reglas** de ausencias,
-calendario laboral y saldos; y el registro de actividad (ENS).
+calendario laboral, **jornadas teóricas por colectivo** y saldos; y el registro de actividad (ENS).
 
 ## Despliegue "como en producción" (Docker)
 

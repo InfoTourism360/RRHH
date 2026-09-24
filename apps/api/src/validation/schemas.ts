@@ -219,6 +219,36 @@ export const usuarioSchema = z
 
 export const rolesSchema = z.object({ roles: z.array(asignacionRolSchema) }).strict();
 
+// ------------------------------ JORNADAS TIPO -------------------------------
+// Reparto semanal de minutos teóricos: los siete días, de domingo (0) a sábado.
+// 1440 es el tope físico de un día; el convenio pondrá límites más bajos, pero
+// eso es del convenio y no de la validación de entrada.
+const minutosPorDiaSchema = z.record(
+  z.enum(['0', '1', '2', '3', '4', '5', '6']),
+  z.number().int().min(0).max(1440),
+);
+
+export const jornadaSchema = z
+  .object({
+    codigo: z.string().min(1).max(50),
+    denominacion: z.string().min(1).max(200),
+    minutosPorDia: minutosPorDiaSchema,
+  })
+  .strict();
+
+export const jornadaUpdateSchema = z
+  .object({
+    denominacion: z.string().min(1).max(200).optional(),
+    minutosPorDia: minutosPorDiaSchema.optional(),
+    activo: z.boolean().optional(),
+  })
+  .strict();
+
+// `null` retira la asignación y devuelve a la persona a la jornada de la entidad.
+export const asignarJornadaSchema = z
+  .object({ jornadaTipoId: z.string().uuid().nullable() })
+  .strict();
+
 // Segundo factor. La baja pide la contraseña, no un código: si el usuario ha
 // perdido el dispositivo, un código es justo lo que no puede aportar.
 export const mfaConfirmarSchema = z.object({ codigo: z.string().regex(/^\d{6}$/) }).strict();

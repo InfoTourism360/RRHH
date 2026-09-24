@@ -7,6 +7,9 @@ import * as est from '../domain/estructura.js';
 import { ctxDe, requiereRol, requiereSesion, validar, registroActividad } from './middleware.js';
 import { listarActividad } from '../domain/registroActividad.js';
 import { panelDireccion } from '../domain/panel.js';
+import {
+  listarJornadas, crearJornada, actualizarJornada, asignarJornada, ErrorJornada,
+} from '../domain/jornada.js';
 import { consultarRPT, resumirRPT } from '../domain/rpt.js';
 import { rptCSV } from '../domain/export/rpt.js';
 import { hashInforme } from '../domain/export/informe.js';
@@ -20,6 +23,7 @@ import { limitarPorOrigen } from './limites.js';
 import {
   cambioSituacionSchema, ceseSchema, loginSchema, personaSchema,
   mfaConfirmarSchema, mfaDesactivarSchema,
+  jornadaSchema, jornadaUpdateSchema, asignarJornadaSchema,
   plazaSchema, puestoSchema, relacionSchema, unidadSchema,
 } from '../validation/schemas.js';
 
@@ -182,6 +186,19 @@ export function crearApp() {
   app.get('/estructura/auditoria/:tabla/:registroId', requiereRol(...GESTION), h(async (req, res) =>
     res.json(await est.historialAuditoria(ctxDe(req), String(req.params.tabla), String(req.params.registroId)))));
 
+  // --------------------------- JORNADAS TIPO -------------------------------
+  // Qué se le presupone a cada colectivo. Sin esto el saldo solo tenía sentido
+  // para quien trabaja de lunes a viernes en horario de oficina.
+  app.get('/estructura/jornadas', requiereRol(...GESTION), h(async (req, res) =>
+    res.json(await listarJornadas(ctxDe(req)))));
+  app.post('/estructura/jornadas', requiereRol(...GESTION), validar(jornadaSchema),
+    h(async (req, res) => res.status(201).json(await crearJornada(ctxDe(req), req.body))));
+  app.patch('/estructura/jornadas/:id', requiereRol(...GESTION), validar(jornadaUpdateSchema),
+    h(async (req, res) => res.json(await actualizarJornada(ctxDe(req), String(req.params.id), req.body))));
+  app.put('/estructura/personas/:id/jornada', requiereRol(...GESTION), validar(asignarJornadaSchema),
+    h(async (req, res) =>
+      res.json(await asignarJornada(ctxDe(req), String(req.params.id), req.body.jornadaTipoId))));
+
   // ------------------------------- RPT -------------------------------------
   // Solo gestión: la RPT publicada no lleva ocupantes, pero esta vista sí, y
   // decir quién está en excedencia es un dato de salud por la puerta de atrás.
@@ -218,6 +235,10 @@ export function crearApp() {
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof ErrorAuth) {
       const code = err.codigo === 'BLOQUEADO' ? 423 : 401;
+      return res.status(code).json({ error: err.message, codigo: err.codigo });
+    }
+    if (err instanceof ErrorJornada) {
+      const code = err.codigo === 'NO_ENCONTRADO' ? 404 : 409;
       return res.status(code).json({ error: err.message, codigo: err.codigo });
     }
     if (err instanceof ErrorDominio) {

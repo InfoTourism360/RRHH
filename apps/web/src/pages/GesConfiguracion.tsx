@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { SecJornadas } from '../SecJornadas';
 import { api, ApiError } from '../api';
 import {
   Alerta, Boton, Campo, Cargando, Etiqueta, Modal, Selector, Tabla, Tarjeta,
@@ -19,7 +20,7 @@ const DEVENGO: Record<string, string> = { ANUAL: 'Anual', POR_HECHO: 'Por hecho 
 const APROBADOR: Record<string, string> = {
   RESPONSABLE_UNIDAD: 'Responsable de unidad', GESTOR_PERSONAL: 'Gestor de personal', AUTOMATICO: 'Automático',
 };
-const TABS = [['reglas', 'Motor de reglas'], ['calendario', 'Calendario laboral'], ['saldos', 'Saldos']] as const;
+const TABS = [['reglas', 'Motor de reglas'], ['calendario', 'Calendario laboral'], ['saldos', 'Saldos'], ['jornadas', 'Jornadas']] as const;
 
 export function GesConfiguracion() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('reglas');
@@ -43,6 +44,7 @@ export function GesConfiguracion() {
       {tab === 'reglas' && <SecReglas />}
       {tab === 'calendario' && <SecCalendario />}
       {tab === 'saldos' && <SecSaldos />}
+      {tab === 'jornadas' && <SecJornadas />}
     </div>
   );
 }

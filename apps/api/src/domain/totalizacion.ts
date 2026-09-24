@@ -1,5 +1,7 @@
 import { conTenant, type Contexto, type Ejecutor } from '../db/pool.js';
-import { leerPoliticas, minutosTeoricos, type PoliticasEntidad } from './jornada.js';
+import {
+  leerPoliticas, minutosTeoricos, jornadaDePersona, type PoliticasEntidad,
+} from './jornada.js';
 
 interface EventoBruto {
   id: string;
@@ -155,11 +157,12 @@ export async function jornadaDelDia(ctx: Contexto, personaId: string, fecha: str
     );
     const { porDia, entradaAbierta, pausaAbierta } = repartirPorDia(resolverEfectivos(r.rows));
     const { presencia, pausa } = porDia.get(fecha) ?? { presencia: 0, pausa: 0 };
+    const minutos = await jornadaDePersona(ej, ctx.entidadId, personaId);
     return {
       cerradoMin: Math.round(presencia) - Math.round(pausa),
       abiertaDesde: entradaAbierta?.toISOString() ?? null,
       pausaDesde: pausaAbierta?.toISOString() ?? null,
-      teoricoMin: minutosTeoricos(pol, new Date(`${fecha}T00:00:00`)),
+      teoricoMin: minutosTeoricos({ ...pol, minutosPorDia: minutos }, new Date(`${fecha}T00:00:00`)),
     };
   });
 }
@@ -195,6 +198,13 @@ export async function totalizar(
 ): Promise<Totalizacion> {
   return conTenant(ctx, async (ej: Ejecutor) => {
     const pol: PoliticasEntidad = await leerPoliticas(ej, ctx.entidadId);
+    // La jornada teórica es la de esta persona: la suya si la tiene asignada y
+    // la de la entidad si no. Comparar a un policía de turnos contra el horario
+    // de oficina daba un saldo que no significaba nada.
+    const jornada: PoliticasEntidad = {
+      ...pol,
+      minutosPorDia: await jornadaDePersona(ej, ctx.entidadId, personaId),
+    };
     const r = await ej.query<EventoBruto>(
       `SELECT id, persona_id, tipo, origen, momento_servidor, momento_cliente,
               corrige_evento_id, accion_correccion
@@ -219,7 +229,7 @@ export async function totalizar(
     for (const fecha of [...clavesDia].sort()) {
       const { presencia, pausa } = porDia.get(fecha) ?? { presencia: 0, pausa: 0 };
       const trabajado = Math.max(0, Math.round(presencia) - Math.round(pausa));
-      const teorico = minutosTeoricos(pol, new Date(`${fecha}T00:00:00`));
+      const teorico = minutosTeoricos(jornada, new Date(`${fecha}T00:00:00`));
       const festivo = (esFestivo?.(fecha) ?? false) || teorico === 0;
       const ausencia = diasAusencia?.has(fecha) ?? false;
       // Un día de ausencia aprobada cubre la jornada teórica: saldo neutro.

@@ -218,12 +218,24 @@ export async function totalizar(
     );
     const { porDia } = repartirPorDia(resolverEfectivos(r.rows));
 
-    // Une los días con eventos y los días de ausencia aprobada (aunque no fichara).
-    // Se recortan los que caen fuera: la consulta pide un día de más para poder
-    // cerrar un turno que empezó el último día del rango.
-    const clavesDia = new Set<string>(
-      [...porDia.keys(), ...(diasAusencia ?? [])].filter((f) => f >= desde && f <= hasta),
-    );
+    // TODOS los días del rango, no solo aquellos en los que hay fichaje.
+    //
+    // Antes se listaban los días con eventos y los de ausencia aprobada, así
+    // que la jornada teórica de un día sin fichar no se descontaba nunca. Para
+    // quien trabaja de lunes a viernes daba igual —el fin de semana tiene
+    // teórico cero—, pero a quien tiene la jornada repartida entre los siete
+    // días le salía un saldo disparado: los dos días que libraba no restaban
+    // nada y acumulaba horas de más cada semana. Un agente con tres meses de
+    // historia aparecía con casi cincuenta horas de exceso.
+    const clavesDia = new Set<string>();
+    for (let d = new Date(`${desde}T00:00:00`); fechaLocal(d) <= hasta; d.setDate(d.getDate() + 1)) {
+      clavesDia.add(fechaLocal(d));
+    }
+    // Y los días con actividad o ausencia que caigan dentro, por si el turno de
+    // la víspera hubiera dejado su huella en el margen de la consulta.
+    for (const f of [...porDia.keys(), ...(diasAusencia ?? [])]) {
+      if (f >= desde && f <= hasta) clavesDia.add(f);
+    }
 
     const dias: DiaTotalizado[] = [];
     for (const fecha of [...clavesDia].sort()) {

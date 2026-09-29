@@ -82,9 +82,10 @@ describe('Turno de noche, de extremo a extremo', () => {
 
     const t = await totalizar({ entidadId: a.entidadId, usuarioId: null }, id, '2026-02-10', '2026-02-11');
     expect(t.totales.trabajadoMin).toBe(480);
-    expect(t.dias).toHaveLength(1);
-    expect(t.dias[0]!.fecha).toBe('2026-02-10');
+    // El rango lista sus dos días; las ocho horas van enteras al que empieza.
+    expect(t.dias.map((d) => d.fecha)).toEqual(['2026-02-10', '2026-02-11']);
     expect(t.dias[0]!.trabajadoMin).toBe(480);
+    expect(t.dias[1]!.trabajadoMin).toBe(0);
   });
 
   it('cierra el turno aunque la salida caiga fuera del rango pedido', async () => {
@@ -157,8 +158,9 @@ describe('Turno de noche, de extremo a extremo', () => {
     await insertarEvento(a.entidadId, id, 'SALIDA', '2026-03-29T06:00:00+02:00');
 
     const t = await totalizar({ entidadId: a.entidadId, usuarioId: null }, id, '2026-03-28', '2026-03-29');
-    expect(t.dias).toHaveLength(1);
+    expect(t.dias[0]!.fecha).toBe('2026-03-28');
     expect(t.dias[0]!.trabajadoMin).toBe(390); // 420 de presencia − 30 de pausa
+    expect(t.totales.trabajadoMin).toBe(390);
   });
 
   it('el día del cambio de hora tiene jornada teórica normal', async () => {

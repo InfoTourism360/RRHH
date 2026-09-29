@@ -7,6 +7,8 @@ import { establecerPin } from '../auth/service.js';
 import { hashearPassword } from '../auth/passwords.js';
 import { generarNominaPDF } from '../domain/export/nomina.js';
 import { passwordSchema } from '../validation/schemas.js';
+import { crearJornada, asignarJornada } from '../domain/jornada.js';
+import { sembrarJornada } from './jornada-demo.js';
 
 // -----------------------------------------------------------------------------
 // SEED de datos realista (NO datos de producción; script de arranque de demo).
@@ -274,6 +276,30 @@ async function main() {
   });
   await aus.aprobar({ entidadId, usuarioId: ue.rows[0]!.id }, solEmp.id as string);
 
+  // --- Jornada tipo: la Policía Local no hace horario de oficina ---
+  // Sin esto, sus turnos de fin de semana contarían enteros como festivos y el
+  // día que libran como déficit: el saldo no significaría nada para ellos.
+  const jornadaTurnos = await crearJornada(ctx, {
+    codigo: 'TURNOS',
+    denominacion: 'Turnos rotatorios (Policía Local)',
+    // 37,5 h semanales repartidas entre los siete días.
+    minutosPorDia: { 0: 321, 1: 321, 2: 321, 3: 321, 4: 321, 5: 321, 6: 321 },
+  });
+  const policias = creados.filter((c) => c.unidad === 'POL');
+  for (const c of policias) {
+    await asignarJornada(ctx, c.personaId, jornadaTurnos.id as string);
+  }
+
+  // --- Historial de jornada: sin fichajes, el control horario se abre vacío ---
+  const conTurnos = new Set(policias.map((c) => c.personaId));
+  const fichajes = await conTenant(ctx, (ej) =>
+    sembrarJornada(
+      ej,
+      entidadId,
+      creados.map((c) => ({ personaId: c.personaId, turnos: conTurnos.has(c.personaId) })),
+      90,
+    ));
+
   const resumen = await conTenant(ctx, async (ej) => {
     const p = await ej.query('SELECT count(*) FROM persona');
     const v = await ej.query('SELECT count(*) FROM v_plaza_estado WHERE vacante');
@@ -288,6 +314,8 @@ async function main() {
     adminLogin: `admin@demo.es / ${PASSWORD_DEMO}`,
     empleadoLogin: `empleado@demo.es / ${PASSWORD_DEMO} (Quiosco: DNI 00000001R, PIN 1234)`,
     ...resumen,
+    fichajesSembrados: fichajes,
+    policiasATurnos: policias.length,
   });
 }
 

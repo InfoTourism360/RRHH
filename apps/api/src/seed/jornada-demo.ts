@@ -38,6 +38,12 @@ export interface PersonaJornada {
   personaId: string;
   /** Los de turnos trabajan fines de semana y noches; el resto, oficina. */
   turnos: boolean;
+  /**
+   * Si se le siembra un olvido de salida. Se desactiva para el empleado con el
+   * que se enseña el portal: su pantalla debe verse sana. El olvido lo tienen
+   * otros, y la historia de la correccion se cuenta desde el back-office.
+   */
+  olvidos?: boolean;
 }
 
 interface Evento { personaId: string; tipo: string; momento: Date; origen: string }
@@ -65,7 +71,7 @@ export function generarEventos(personas: PersonaJornada[], dias: number, hasta =
     // el olvido se atara a la fecha podría caer en un día que esa persona
     // libra, y entonces no habría olvido ninguno. Ya pasó.
     let trabajados = 0;
-    const olvidaEl = 8 + (hash(`olvido${p.personaId}`) % 40);
+    const olvidaEl = p.olvidos === false ? -1 : 8 + (hash(`olvido${p.personaId}`) % 40);
 
     for (let atras = dias; atras >= 0; atras--) {
       const dia = new Date(hoy);

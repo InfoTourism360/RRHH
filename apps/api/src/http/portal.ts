@@ -31,6 +31,13 @@ function hoy(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Ayer, en formato ISO local. El saldo consolidado no incluye hoy. */
+function ayer(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function rutasPortal(): Router {
   const r = Router();
 
@@ -40,17 +47,28 @@ export function rutasPortal(): Router {
     if (!personaId) return res.json({ sinFicha: true });
     const ctx = ctxDe(req);
     const anio = new Date().getFullYear();
-    const desde = inicioMes(), hasta = hoy();
-    const festivos = await conTenant(ctx, (ej) => festivosEnRango(ej, desde, hasta));
-    const diasAus = await aus.diasAusenciaAprobada(ctx, personaId, desde, hasta);
-    const tot = await totalizar(ctx, personaId, desde, hasta, (f) => festivos.has(f), diasAus);
+    // El saldo del mes llega hasta AYER. Incluir hoy restaba la jornada teórica
+    // entera mientras aún se estaba trabajando: a media mañana cualquiera veía
+    // un déficit de siete horas y media que se iba solo al fichar la salida.
+    // Lo de hoy se enseña aparte y en vivo, en `jornadaHoy`.
+    const desde = inicioMes(), hasta = ayer();
+    const hayMes = hasta >= desde;
+    const festivos = hayMes
+      ? await conTenant(ctx, (ej) => festivosEnRango(ej, desde, hasta))
+      : new Set<string>();
+    const diasAus = hayMes ? await aus.diasAusenciaAprobada(ctx, personaId, desde, hasta) : new Set<string>();
+    const tot = hayMes
+      ? await totalizar(ctx, personaId, desde, hasta, (f) => festivos.has(f), diasAus)
+      : null;
     const misSol = await aus.misSolicitudes(ctx, personaId);
     res.json({
-      saldoHorarioMesMin: tot.totales.saldoMin,
+      // El día 1 todavía no hay mes que consolidar.
+      saldoHorarioMesMin: tot?.totales.saldoMin ?? 0,
       diasDisponibles: await aus.saldos(ctx, personaId, anio),
       solicitudesPendientes: misSol.filter((s) => s.estado === 'SOLICITADA').length,
       documentos: (await doc.listarDocumentos(ctx, personaId)).length,
-      jornadaHoy: await jornadaDelDia(ctx, personaId, hasta),
+      // Hoy, no `hasta`: `hasta` es ayer desde que el saldo se consolida.
+      jornadaHoy: await jornadaDelDia(ctx, personaId, hoy()),
     });
   }));
 

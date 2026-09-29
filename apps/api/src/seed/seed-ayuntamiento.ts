@@ -35,6 +35,25 @@ function dni(n: number): string {
   return num + LETRAS_DNI[n % 23];
 }
 
+/**
+ * Correo corporativo con la pinta que tienen de verdad: sin acentos y sin un
+ * número pegado al apellido. Solo se desempata con un dígito si hace falta.
+ */
+const correosUsados = new Set<string>();
+function correoCorporativo(nombre: string, ap1: string, ap2: string): string {
+  const limpia = (s: string) =>
+    s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+  const base = `${limpia(nombre)}.${limpia(ap1)}`;
+  let candidato = `${base}@demo.es`;
+  let n = 2;
+  while (correosUsados.has(candidato)) {
+    candidato = `${base}${limpia(ap2).slice(0, 1)}${n > 2 ? n : ''}@demo.es`;
+    n++;
+  }
+  correosUsados.add(candidato);
+  return candidato;
+}
+
 interface DefUnidad { codigo: string; denom: string; grupo: string; escala: string | null; nivel: number; }
 const UNIDADES: DefUnidad[] = [
   { codigo: 'ALC', denom: 'Alcaldía', grupo: 'A1', escala: 'GENERAL', nivel: 30 },
@@ -113,16 +132,27 @@ async function main() {
         formaProvision: u.nivel >= 28 ? 'LIBRE_DESIG' : 'CONCURSO',
         tipoJornada: 'COMPLETA',
       });
-      const nombre = NOMBRES[nDoc % NOMBRES.length]!;
+      // Multiplicadores primos con el tamaño de cada lista para que los nombres
+      // no salgan en fila y los dos apellidos nunca coincidan. Antes 11 de 59
+      // personas se llamaban «García García» o «Muñoz Muñoz», y cada trío de la
+      // misma unidad compartía los dos apellidos: se veía a la legua que la
+      // plantilla estaba generada.
+      const nombre = NOMBRES[(nDoc * 7) % NOMBRES.length]!;
       const ap1 = APELLIDOS[(nDoc * 3) % APELLIDOS.length]!;
-      const ap2 = APELLIDOS[(nDoc * 7) % APELLIDOS.length]!;
+      // El término de la vuelta (`nDoc / 20`) es lo que impide que quien
+      // comparte primer apellido comparta también el segundo: sin él ambos
+      // índices dependían del mismo ciclo de veinte y la plantilla salía en
+      // tríos de hermanos.
+      let i2 = (nDoc * 7 + 11 + Math.floor(nDoc / APELLIDOS.length) * 3) % APELLIDOS.length;
+      if (APELLIDOS[i2] === ap1) i2 = (i2 + 1) % APELLIDOS.length;
+      const ap2 = APELLIDOS[i2]!;
       const persona = await est.crearPersona(ctx, {
         tipoDocumento: 'DNI',
         numDocumento: dni(nDoc),
         nombre,
         apellido1: ap1,
         apellido2: ap2,
-        emailCorp: `${nombre}.${ap1}${nDoc}@demo.es`.toLowerCase(),
+        emailCorp: correoCorporativo(nombre, ap1, ap2),
       });
       const rel = await est.crearRelacion(ctx, {
         personaId: persona.id as string,
@@ -296,7 +326,12 @@ async function main() {
     sembrarJornada(
       ej,
       entidadId,
-      creados.map((c) => ({ personaId: c.personaId, turnos: conTurnos.has(c.personaId) })),
+      creados.map((c) => ({
+        personaId: c.personaId,
+        turnos: conTurnos.has(c.personaId),
+        // El empleado del portal, sin olvidos: su pantalla se enseña tal cual.
+        olvidos: c.personaId !== empleado.personaId,
+      })),
       90,
     ));
 

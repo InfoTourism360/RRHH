@@ -54,6 +54,20 @@ function correoCorporativo(nombre: string, ap1: string, ap2: string): string {
   return candidato;
 }
 
+/**
+ * Complemento específico anual, aproximado a partir del nivel de destino.
+ *
+ * Sin esta columna la propia aplicación avisa —con razón— de que la RPT no
+ * debería publicarse incompleta, y la demostración salía con los 63 puestos
+ * señalados. Las cuantías son de andar por casa para un ayuntamiento pequeño:
+ * lo que importa aquí es que la relación esté completa, no el importe.
+ */
+function complementoEspecifico(nivel: number, semilla: number): number {
+  const base = nivel * 600;
+  const variacion = ((semilla * 37) % 9) * 120; // hasta ~1.000 € de dispersión
+  return Math.round((base + variacion) / 12) * 12;
+}
+
 interface DefUnidad { codigo: string; denom: string; grupo: string; escala: string | null; nivel: number; }
 const UNIDADES: DefUnidad[] = [
   { codigo: 'ALC', denom: 'Alcaldía', grupo: 'A1', escala: 'GENERAL', nivel: 30 },
@@ -129,6 +143,7 @@ async function main() {
         codigo: `PT-${String(nPlaza).padStart(4, '0')}`,
         denominacion: `${u.denom} — puesto ${i + 1}`,
         nivelCd: u.nivel,
+        complementoEsp: complementoEspecifico(u.nivel, nPlaza),
         formaProvision: u.nivel >= 28 ? 'LIBRE_DESIG' : 'CONCURSO',
         tipoJornada: 'COMPLETA',
       });
@@ -181,6 +196,7 @@ async function main() {
       codigo: `PT-${String(nPlaza).padStart(4, '0')}`,
       denominacion: `Puesto vacante ${i + 1}`,
       nivelCd: 16,
+      complementoEsp: complementoEspecifico(16, nPlaza),
       formaProvision: 'CONCURSO',
       tipoJornada: 'COMPLETA',
     });
@@ -224,7 +240,7 @@ async function main() {
   const puestoDest = await est.crearPuesto(ctx, {
     plazaId: plazaDest.id as string, unidadId: unidadIds['INT']!,
     codigo: `PT-${String(nPlaza).padStart(4, '0')}`, denominacion: 'Técnico en comisión (Intervención)',
-    nivelCd: 24, formaProvision: 'CONCURSO', tipoJornada: 'COMPLETA',
+    nivelCd: 24, complementoEsp: complementoEspecifico(24, nPlaza), formaProvision: 'CONCURSO', tipoJornada: 'COMPLETA',
   });
   void destino;
   await est.crearRelacion(ctx, {

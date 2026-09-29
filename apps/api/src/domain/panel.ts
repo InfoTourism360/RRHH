@@ -10,12 +10,33 @@ export function panelDireccion(ctx: Contexto) {
     // la transacción: antes eran 10 round-trips encadenados en la pantalla que
     // más se abre del producto.
     const [
-      efectivosR, plazasR, vacantesR, pendientesR,
+      efectivosR, plazasR, vacantesR, reservadosR, pendientesR,
       porGrupo, porUnidad, porVinculo, porSituacion, porNivel,
     ] = await Promise.all([
       uno(`SELECT count(*)::int n FROM relacion_servicio WHERE cese IS NULL AND ocupa_efectivo`),
       uno(`SELECT count(*)::int n FROM plaza WHERE vigencia_hasta IS NULL`),
-      uno(`SELECT count(*)::int n FROM v_plaza_estado WHERE vacante`),
+      // Vacante NO es lo mismo que «sin ocupante efectivo». El puesto cuyo
+      // titular está en excedencia o en comisión con reserva no tiene a nadie
+      // sentado, pero no puede ofertarse ni sacarse a concurso mientras dure la
+      // reserva. Contarlo como vacante es el error caro de este dominio, y el
+      // cuadro de mando lo cometía: decía 5 vacantes donde la RPT decía 4 más
+      // una reservada. Dos pantallas del mismo producto con cifras distintas.
+      uno(`SELECT count(*)::int n
+             FROM v_plaza_estado v
+            WHERE v.vacante
+              AND NOT EXISTS (
+                SELECT 1 FROM puesto pu
+                  JOIN relacion_servicio rs ON rs.puesto_id = pu.id
+                 WHERE pu.plaza_id = v.plaza_id
+                   AND rs.cese IS NULL AND NOT rs.ocupa_efectivo)`),
+      uno(`SELECT count(*)::int n
+             FROM v_plaza_estado v
+            WHERE v.vacante
+              AND EXISTS (
+                SELECT 1 FROM puesto pu
+                  JOIN relacion_servicio rs ON rs.puesto_id = pu.id
+                 WHERE pu.plaza_id = v.plaza_id
+                   AND rs.cese IS NULL AND NOT rs.ocupa_efectivo)`),
       uno(`SELECT count(*)::int n FROM solicitud_ausencia WHERE estado = 'SOLICITADA'`),
       uno(`SELECT pl.grupo_codigo k, count(*)::int v
              FROM relacion_servicio rs JOIN puesto pu ON pu.id=rs.puesto_id JOIN plaza pl ON pl.id=pu.plaza_id
@@ -31,7 +52,8 @@ export function panelDireccion(ctx: Contexto) {
                       WHEN nivel_cd<=26 THEN '21-26' ELSE '27-30' END k, count(*)::int v
              FROM puesto WHERE vigencia_hasta IS NULL GROUP BY k ORDER BY k`),
     ]);
-    const efectivos = efectivosR[0], plazas = plazasR[0], vacantes = vacantesR[0], pendientes = pendientesR[0];
+    const efectivos = efectivosR[0], plazas = plazasR[0], vacantes = vacantesR[0];
+    const reservados = reservadosR[0], pendientes = pendientesR[0];
 
     const total = efectivos!.n as number;
     const interinosTemp = (porVinculo as { k: string; v: number }[])
@@ -43,7 +65,11 @@ export function panelDireccion(ctx: Contexto) {
         efectivos: total,
         plazas: plazas!.n,
         vacantes: vacantes!.n,
-        coberturaPct: plazas!.n ? Math.round(((plazas!.n - vacantes!.n) / plazas!.n) * 100) : 0,
+        reservados: reservados!.n,
+        // La cobertura mide plazas con alguien dentro, así que los reservados
+        // tampoco cuentan como cubiertos: no hay nadie prestando servicio.
+        coberturaPct: plazas!.n
+          ? Math.round(((plazas!.n - vacantes!.n - reservados!.n) / plazas!.n) * 100) : 0,
         temporalidadPct: total ? Math.round((interinosTemp / total) * 1000) / 10 : 0,
         ausenciasPendientes: pendientes!.n,
       },

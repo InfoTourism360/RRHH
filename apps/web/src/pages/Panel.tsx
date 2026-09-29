@@ -5,7 +5,10 @@ import { BarrasVertical, BarrasHorizontal, Donut, Gauge } from '../charts';
 
 interface KV { k: string; v: number }
 interface Panel {
-  kpis: { efectivos: number; plazas: number; vacantes: number; coberturaPct: number; temporalidadPct: number; ausenciasPendientes: number };
+  kpis: {
+    efectivos: number; plazas: number; vacantes: number; reservados: number;
+    coberturaPct: number; temporalidadPct: number; ausenciasPendientes: number;
+  };
   porGrupo: KV[]; porUnidad: KV[]; porVinculo: KV[]; porSituacion: KV[]; porNivel: KV[];
 }
 
@@ -31,11 +34,12 @@ export function Panel() {
     <div>
       <CabeceraPagina titulo="Cuadro de mando de personal" descripcion="Plantilla, RPT, control horario y ausencias — datos en vivo de tu entidad." />
 
-      <section aria-label="Indicadores clave" className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
+      <section aria-label="Indicadores clave" className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-6">
         <Kpi etiqueta="Efectivos en activo" valor={String(k.efectivos)} pie="relación vigente" tono="ok" />
         <Kpi etiqueta="Plantilla (plazas)" valor={String(k.plazas)} pie="dotaciones" />
         <Kpi etiqueta="Cobertura de la RPT" valor={`${k.coberturaPct}%`} tono="ok" />
-        <Kpi etiqueta="Plazas vacantes" valor={String(k.vacantes)} pie="por cubrir" tono="aviso" />
+        <Kpi etiqueta="Plazas vacantes" valor={String(k.vacantes)} pie="ofertables" tono="aviso" />
+        <Kpi etiqueta="Plazas reservadas" valor={String(k.reservados)} pie="no ofertables" />
         <Kpi etiqueta="Temporalidad" valor={`${String(k.temporalidadPct).replace('.', ',')}%`} tono="ok" />
         <Kpi etiqueta="Ausencias por resolver" valor={String(k.ausenciasPendientes)} pie="pendientes" tono={k.ausenciasPendientes ? "aviso" : "ok"} />
       </section>
@@ -53,7 +57,10 @@ export function Panel() {
         </Tarjeta>
         <div className="grid gap-4">
           <Tarjeta titulo="Cobertura de la relación de puestos">
-            <Gauge etiqueta="Cobertura de la RPT" ocupadas={k.plazas - k.vacantes} total={k.plazas} />
+            {/* Misma cuenta que el KPI: ni las vacantes ni las reservadas
+                tienen a nadie prestando servicio. */}
+            <Gauge etiqueta="Cobertura de la RPT"
+                   ocupadas={k.plazas - k.vacantes - k.reservados} total={k.plazas} />
           </Tarjeta>
           <Tarjeta titulo="Situación administrativa">
             <ul className="space-y-1">
